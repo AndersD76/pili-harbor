@@ -55,3 +55,40 @@ app.include_router(ws.router)
 @app.get("/health")
 async def health():
     return {"status": "ok", "service": "pili-harbor"}
+
+
+# Serve frontend static files (Next.js export)
+import os
+from pathlib import Path
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+
+# Check multiple possible paths (local dev vs Docker)
+_candidates = [
+    Path(__file__).resolve().parent.parent.parent / "frontend" / "out",  # Docker
+    Path(__file__).resolve().parent.parent.parent.parent / "frontend" / "out",  # Local dev
+]
+FRONTEND_DIR = next((p for p in _candidates if p.exists()), _candidates[0])
+
+if FRONTEND_DIR.exists():
+    app.mount("/_next", StaticFiles(directory=FRONTEND_DIR / "_next"), name="next-static")
+
+    @app.get("/{full_path:path}")
+    async def serve_frontend(full_path: str):
+        # Try exact file
+        file_path = FRONTEND_DIR / full_path
+        if file_path.is_file():
+            return FileResponse(file_path)
+        # Try with .html
+        html_path = FRONTEND_DIR / f"{full_path}.html"
+        if html_path.is_file():
+            return FileResponse(html_path)
+        # Try index.html in directory
+        index_path = FRONTEND_DIR / full_path / "index.html"
+        if index_path.is_file():
+            return FileResponse(index_path)
+        # Fallback to root index
+        root_index = FRONTEND_DIR / "index.html"
+        if root_index.is_file():
+            return FileResponse(root_index)
+        return {"detail": "Página não encontrada"}

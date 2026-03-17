@@ -15,7 +15,9 @@ class WebSocketClient {
     const token = getToken()
     if (!token) return
 
-    const wsUrl = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8000'
+    const proto = typeof window !== 'undefined' && window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+    const host = typeof window !== 'undefined' ? window.location.host : 'localhost:8000'
+    const wsUrl = process.env.NEXT_PUBLIC_WS_URL || `${proto}//${host}`
     this.url = `${wsUrl}/ws/yard/${yardId}?token=${token}`
     this.shouldReconnect = true
     this._connect()
