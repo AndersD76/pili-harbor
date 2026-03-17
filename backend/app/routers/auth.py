@@ -21,6 +21,7 @@ from app.schemas.auth import (
     LoginRequest,
     MeResponse,
     RefreshRequest,
+    RegisterRequest,
     TenantResponse,
     TokenResponse,
     UserResponse,
@@ -28,6 +29,56 @@ from app.schemas.auth import (
 
 router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
 settings = get_settings()
+
+
+@router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
+async def register(body: RegisterRequest, db: AsyncSession = Depends(get_db)):
+    # Check if email already exists
+    result = await db.execute(select(User).where(User.email == body.email))
+    if result.scalar_one_or_none():
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Este email já está cadastrado")
+
+    # Create tenant (free plan)
+    import re
+    slug = re.sub(r'[^a-z0-9]', '-', body.company_name.lower()).strip('-')[:50]
+    # Ensure unique slug
+    existing = await db.execute(select(Tenant).where(Tenant.slug == slug))
+    if existing.scalar_one_or_none():
+        slug = f"{slug}-{uuid.uuid4().hex[:6]}"
+
+    tenant = Tenant(
+        name=body.company_name,
+        slug=slug,
+        plan="basic",
+        max_yards=1,
+        max_containers=300,
+        max_forklifts=4,
+        active=True,
+    )
+    db.add(tenant)
+    await db.flush()
+
+    # Create admin user
+    user = User(
+        tenant_id=tenant.id,
+        email=body.email,
+        password_hash=hash_password(body.password),
+        full_name=body.full_name,
+        role="admin",
+        active=True,
+    )
+    db.add(user)
+    await db.flush()
+    await db.refresh(user)
+
+    access_token = create_access_token({"sub": str(user.id), "tenant_id": str(user.tenant_id), "role": user.role})
+    refresh_token = create_refresh_token({"sub": str(user.id), "tenant_id": str(user.tenant_id)})
+
+    return TokenResponse(
+        access_token=access_token,
+        refresh_token=refresh_token,
+        user=UserResponse.model_validate(user),
+    )
 
 
 @router.post("/login", response_model=TokenResponse)

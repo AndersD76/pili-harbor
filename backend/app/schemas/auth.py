@@ -47,3 +47,10 @@ class TenantResponse(BaseModel):
 class MeResponse(BaseModel):
     user: UserResponse
     tenant: TenantResponse
+
+
+class RegisterRequest(BaseModel):
+    full_name: str
+    company_name: str
+    email: EmailStr
+    password: str
