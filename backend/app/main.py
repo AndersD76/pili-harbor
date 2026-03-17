@@ -73,11 +73,14 @@ async def proxy_frontend(request: Request, full_path: str):
         url += f"?{request.url.query}"
     async with httpx.AsyncClient() as client:
         try:
-            resp = await client.get(url, headers=dict(request.headers), timeout=10)
+            resp = await client.get(url, timeout=10)
+            # Strip hop-by-hop and encoding headers to avoid mismatch
+            skip = {"content-encoding", "transfer-encoding", "connection", "keep-alive"}
+            headers = {k: v for k, v in resp.headers.items() if k.lower() not in skip}
             return StreamingResponse(
                 iter([resp.content]),
                 status_code=resp.status_code,
-                headers=dict(resp.headers),
+                headers=headers,
             )
         except httpx.ConnectError:
             return {"detail": "Frontend ainda iniciando..."}
