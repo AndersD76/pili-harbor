@@ -1,8 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: 'export',
-  trailingSlash: true,
-  images: { unoptimized: true },
+  output: 'standalone',
   webpack: (config) => {
     config.externals = [...(config.externals || []), { canvas: 'canvas' }]
     return config
