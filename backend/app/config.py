@@ -4,8 +4,8 @@ from functools import lru_cache
 
 class Settings(BaseSettings):
     DATABASE_URL: str
-    REDIS_URL: str
-    MQTT_BROKER_URL: str = "broker.emqx.io"
+    REDIS_URL: str = ""
+    MQTT_BROKER_URL: str = ""
     MQTT_USERNAME: str = ""
     MQTT_PASSWORD: str = ""
     ANTHROPIC_API_KEY: str = ""

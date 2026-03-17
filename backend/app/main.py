@@ -6,19 +6,26 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
-from app.mqtt_worker import mqtt_listener
 from app.routers import auth, containers, forklifts, manifests, tasks, ws, yards
 
 logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 settings = get_settings()
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Start MQTT worker
-    mqtt_task = asyncio.create_task(mqtt_listener())
+    # Start MQTT worker only if configured
+    mqtt_task = None
+    if settings.MQTT_BROKER_URL:
+        from app.mqtt_worker import mqtt_listener
+        mqtt_task = asyncio.create_task(mqtt_listener())
+        logger.info("MQTT worker started")
+    else:
+        logger.info("MQTT not configured, skipping worker")
     yield
-    mqtt_task.cancel()
+    if mqtt_task:
+        mqtt_task.cancel()
 
 
 app = FastAPI(
