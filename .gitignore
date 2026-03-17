@@ -1,0 +1,16 @@
+__pycache__/
+*.pyc
+.env
+*.egg-info/
+.venv/
+venv/
+node_modules/
+.next/
+.vercel
+dist/
+*.log
+.DS_Store
+Thumbs.db
+landing/
+gh.zip
+gh-cli/
