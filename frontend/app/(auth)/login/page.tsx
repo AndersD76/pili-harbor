@@ -1,13 +1,20 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { login, api } from '@/lib/api'
 import Cookies from 'js-cookie'
+import Link from 'next/link'
+import { Suspense } from 'react'
 
-export default function LoginPage() {
+function LoginPageInner() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [mode, setMode] = useState<'login' | 'register'>('login')
+
+  useEffect(() => {
+    if (searchParams.get('mode') === 'register') setMode('register')
+  }, [searchParams])
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [fullName, setFullName] = useState('')
@@ -62,7 +69,9 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-harbor-bg">
       <div className="w-full max-w-md p-8">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-harbor-accent tracking-wider">PILI HARBOR</h1>
+          <Link href="/" className="inline-block">
+            <h1 className="text-3xl font-bold text-harbor-accent tracking-wider hover:opacity-80 transition-opacity">PILI HARBOR</h1>
+          </Link>
           <p className="text-harbor-muted mt-2 text-sm">
             {mode === 'login' ? 'Control Center' : 'Crie sua conta grátis'}
           </p>
@@ -185,5 +194,13 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginPageInner />
+    </Suspense>
   )
 }
