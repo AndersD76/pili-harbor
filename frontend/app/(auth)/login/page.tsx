@@ -137,134 +137,185 @@ function LoginPageInner() {
     )
   }
 
-  // --- PAINEL mode: management dashboard login ---
+  // --- PAINEL mode: premium login matching landing page ---
+  const inputClass = "w-full px-4 py-3 bg-white/[0.04] border border-white/10 rounded-xl text-white placeholder-gray-500 focus:border-red-500/50 focus:bg-white/[0.06] focus:outline-none transition-all duration-300"
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-harbor-bg">
-      <div className="w-full max-w-md p-8">
-        <div className="text-center mb-8">
-          <Link href="/" className="inline-block">
-            <h1 className="text-3xl font-bold text-harbor-accent tracking-wider hover:opacity-80 transition-opacity">PILI HARBOR</h1>
+    <div className="min-h-screen relative flex items-center justify-center overflow-hidden">
+      {/* Background image with overlay */}
+      <div
+        className="absolute inset-0 bg-cover bg-center"
+        style={{ backgroundImage: 'url(https://images.unsplash.com/photo-1494412574643-ff11b0a5eb19?w=1920&q=80)' }}
+      />
+      <div className="absolute inset-0 bg-gradient-to-br from-[#05080a]/95 via-[#05080a]/85 to-[#05080a]/95" />
+      <div className="absolute inset-0 bg-[#05080a]/60" />
+
+      {/* Floating nav */}
+      <nav className="fixed top-0 w-full z-50 backdrop-blur-xl bg-[#05080a]/70 border-b border-white/5">
+        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-red-500 to-red-700 flex items-center justify-center font-bold text-sm">P</div>
+            <span className="text-lg font-bold tracking-wider">PILI HARBOR</span>
           </Link>
-          <p className="text-harbor-muted mt-2 text-sm">
-            {mode === 'login' ? 'Control Center' : 'Crie sua conta grátis'}
-          </p>
+          <Link href="/" className="text-sm text-gray-400 hover:text-white transition-colors">
+            Voltar ao site
+          </Link>
         </div>
+      </nav>
 
-        {error && (
-          <div className="bg-red-900/30 border border-red-800 text-red-400 px-4 py-3 rounded text-sm mb-6">
-            {error}
+      {/* Login card */}
+      <div className="relative z-10 w-full max-w-md mx-4">
+        <div className="backdrop-blur-2xl bg-white/[0.03] rounded-3xl border border-white/10 p-10 shadow-2xl shadow-black/50">
+          {/* Logo */}
+          <div className="text-center mb-8">
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-red-500 to-red-700 flex items-center justify-center font-bold text-xl mx-auto mb-5 shadow-lg shadow-red-500/25">
+              P
+            </div>
+            <h1 className="text-2xl font-black tracking-wider">
+              {mode === 'login' ? 'PILI HARBOR' : 'Crie sua conta'}
+            </h1>
+            <p className="text-gray-500 text-sm mt-2">
+              {mode === 'login' ? 'Control Center' : 'Comece a rastrear seu patio agora'}
+            </p>
           </div>
-        )}
 
-        {mode === 'login' ? (
-          <form onSubmit={handleLogin} className="space-y-5">
-            <div>
-              <label className="block text-sm text-harbor-muted mb-2">Email</label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-3 bg-harbor-surface border border-harbor-border rounded text-harbor-text focus:border-harbor-accent focus:outline-none"
-                placeholder="seu@email.com"
-                required
-              />
+          {error && (
+            <div className="bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3 rounded-xl text-sm mb-6 text-center backdrop-blur-sm">
+              {error}
             </div>
-            <div>
-              <label className="block text-sm text-harbor-muted mb-2">Senha</label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-3 bg-harbor-surface border border-harbor-border rounded text-harbor-text focus:border-harbor-accent focus:outline-none"
-                placeholder="••••••••"
-                required
-              />
-            </div>
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-3 bg-harbor-accent text-white font-semibold rounded hover:bg-red-600 disabled:opacity-50 transition-colors"
-            >
-              {loading ? 'Entrando...' : 'Entrar'}
-            </button>
-          </form>
-        ) : (
-          <form onSubmit={handleRegister} className="space-y-4">
-            <div>
-              <label className="block text-sm text-harbor-muted mb-1">Seu nome</label>
-              <input
-                type="text"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                className="w-full px-4 py-3 bg-harbor-surface border border-harbor-border rounded text-harbor-text focus:border-harbor-accent focus:outline-none"
-                placeholder="João Silva"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm text-harbor-muted mb-1">Nome da empresa</label>
-              <input
-                type="text"
-                value={companyName}
-                onChange={(e) => setCompanyName(e.target.value)}
-                className="w-full px-4 py-3 bg-harbor-surface border border-harbor-border rounded text-harbor-text focus:border-harbor-accent focus:outline-none"
-                placeholder="Minha Empresa Ltda"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm text-harbor-muted mb-1">Email</label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-3 bg-harbor-surface border border-harbor-border rounded text-harbor-text focus:border-harbor-accent focus:outline-none"
-                placeholder="seu@email.com"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm text-harbor-muted mb-1">Senha</label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-3 bg-harbor-surface border border-harbor-border rounded text-harbor-text focus:border-harbor-accent focus:outline-none"
-                placeholder="Mínimo 6 caracteres"
-                minLength={6}
-                required
-              />
-            </div>
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-3 bg-[#00e07a] text-harbor-bg font-semibold rounded hover:bg-green-400 disabled:opacity-50 transition-colors"
-            >
-              {loading ? 'Criando conta...' : 'Criar conta grátis'}
-            </button>
-            <p className="text-center text-xs text-harbor-muted">
-              Plano básico gratuito por 14 dias. Sem cartão de crédito.
-            </p>
-          </form>
-        )}
-
-        <div className="mt-6 text-center">
-          {mode === 'login' ? (
-            <p className="text-harbor-muted text-sm">
-              Não tem conta?{' '}
-              <button onClick={() => { setMode('register'); setError('') }} className="text-[#00e07a] hover:underline font-semibold">
-                Acesse grátis
-              </button>
-            </p>
-          ) : (
-            <p className="text-harbor-muted text-sm">
-              Já tem conta?{' '}
-              <button onClick={() => { setMode('login'); setError('') }} className="text-harbor-accent hover:underline font-semibold">
-                Fazer login
-              </button>
-            </p>
           )}
+
+          {mode === 'login' ? (
+            <form onSubmit={handleLogin} className="space-y-4">
+              <div>
+                <label className="block text-xs text-gray-400 mb-2 uppercase tracking-wider">Email</label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className={inputClass}
+                  placeholder="seu@email.com"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-400 mb-2 uppercase tracking-wider">Senha</label>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className={inputClass}
+                  placeholder="••••••••"
+                  required
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full py-3.5 bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 text-white font-bold rounded-xl transition-all shadow-lg shadow-red-500/25 hover:shadow-red-500/40 disabled:opacity-50 disabled:hover:shadow-red-500/25 mt-2"
+              >
+                {loading ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
+                    Entrando...
+                  </span>
+                ) : 'Entrar'}
+              </button>
+            </form>
+          ) : (
+            <form onSubmit={handleRegister} className="space-y-3.5">
+              <div>
+                <label className="block text-xs text-gray-400 mb-1.5 uppercase tracking-wider">Seu nome</label>
+                <input
+                  type="text"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  className={inputClass}
+                  placeholder="João Silva"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-400 mb-1.5 uppercase tracking-wider">Nome da empresa</label>
+                <input
+                  type="text"
+                  value={companyName}
+                  onChange={(e) => setCompanyName(e.target.value)}
+                  className={inputClass}
+                  placeholder="Minha Empresa Ltda"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-400 mb-1.5 uppercase tracking-wider">Email</label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className={inputClass}
+                  placeholder="seu@email.com"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-400 mb-1.5 uppercase tracking-wider">Senha</label>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className={inputClass}
+                  placeholder="Minimo 6 caracteres"
+                  minLength={6}
+                  required
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full py-3.5 bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-400 text-white font-bold rounded-xl transition-all shadow-lg shadow-green-500/25 hover:shadow-green-500/40 disabled:opacity-50 mt-1"
+              >
+                {loading ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
+                    Criando conta...
+                  </span>
+                ) : 'Criar conta grátis'}
+              </button>
+              <p className="text-center text-xs text-gray-600 mt-2">
+                14 dias grátis. Sem cartão de crédito.
+              </p>
+            </form>
+          )}
+
+          <div className="mt-6 pt-6 border-t border-white/5 text-center">
+            {mode === 'login' ? (
+              <p className="text-gray-500 text-sm">
+                Não tem conta?{' '}
+                <button onClick={() => { setMode('register'); setError('') }} className="text-red-400 hover:text-red-300 font-semibold transition-colors">
+                  Comece grátis
+                </button>
+              </p>
+            ) : (
+              <p className="text-gray-500 text-sm">
+                Já tem conta?{' '}
+                <button onClick={() => { setMode('login'); setError('') }} className="text-red-400 hover:text-red-300 font-semibold transition-colors">
+                  Fazer login
+                </button>
+              </p>
+            )}
+          </div>
         </div>
+
+        {/* Bottom branding */}
+        <p className="text-center text-xs text-gray-700 mt-6">
+          piliharbor.io
+        </p>
       </div>
     </div>
   )
