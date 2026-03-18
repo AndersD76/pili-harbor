@@ -1,6 +1,7 @@
 import asyncio
 import json
 import logging
+import ssl
 
 import aiomqtt
 
@@ -28,10 +29,13 @@ async def mqtt_listener() -> None:
     """Main MQTT listener loop with reconnection."""
     while True:
         try:
+            tls_context = ssl.create_default_context()
             async with aiomqtt.Client(
                 hostname=settings.MQTT_BROKER_URL,
+                port=8883,
                 username=settings.MQTT_USERNAME or None,
                 password=settings.MQTT_PASSWORD or None,
+                tls_context=tls_context,
             ) as client:
                 await client.subscribe("geomesh/#")
                 logger.info("MQTT connected and subscribed to geomesh/#")
