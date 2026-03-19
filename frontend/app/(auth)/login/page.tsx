@@ -31,9 +31,9 @@ function LoginPageInner() {
     try {
       const data = await login(email, password)
       if (isEaze || data.user.role === 'operator') {
-        router.push('/operator')
+        window.location.href = '/operator'
       } else {
-        router.push('/dashboard')
+        window.location.href = '/dashboard'
       }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Erro ao fazer login')
@@ -59,7 +59,7 @@ function LoginPageInner() {
       })
       Cookies.set('access_token', data.access_token, { expires: 1, path: '/' })
       Cookies.set('refresh_token', data.refresh_token, { expires: 30, path: '/' })
-      router.push('/dashboard')
+      window.location.href = '/dashboard'
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Erro ao criar conta')
     } finally {
