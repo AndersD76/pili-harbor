@@ -66,16 +66,25 @@ from fastapi.responses import StreamingResponse
 NEXTJS_URL = "http://127.0.0.1:3000"
 
 
-@app.get("/{full_path:path}")
+@app.api_route("/{full_path:path}", methods=["GET", "HEAD"])
 async def proxy_frontend(request: Request, full_path: str):
     """Proxy all non-API requests to Next.js server."""
     url = f"{NEXTJS_URL}/{full_path}"
     if request.url.query:
         url += f"?{request.url.query}"
-    async with httpx.AsyncClient() as client:
+
+    # Forward cookies and key headers to Next.js
+    proxy_headers = {}
+    if request.headers.get("cookie"):
+        proxy_headers["cookie"] = request.headers["cookie"]
+    if request.headers.get("accept"):
+        proxy_headers["accept"] = request.headers["accept"]
+    if request.headers.get("user-agent"):
+        proxy_headers["user-agent"] = request.headers["user-agent"]
+
+    async with httpx.AsyncClient(follow_redirects=False) as client:
         try:
-            resp = await client.get(url, timeout=10)
-            # Strip hop-by-hop and encoding headers to avoid mismatch
+            resp = await client.get(url, headers=proxy_headers, timeout=10)
             skip = {"content-encoding", "transfer-encoding", "connection", "keep-alive"}
             headers = {k: v for k, v in resp.headers.items() if k.lower() not in skip}
             return StreamingResponse(
