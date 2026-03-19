@@ -110,6 +110,32 @@ export default function TasksPage() {
     }
   }
 
+  async function changeStatus(taskId: string, newStatus: string) {
+    if (!yardId) return
+    try {
+      await api.put(`/api/v1/yards/${yardId}/tasks/${taskId}/status`, { status: newStatus })
+      loadTasks(yardId)
+    } catch (err: any) {
+      alert(err.message || 'Erro ao atualizar status')
+    }
+  }
+
+  const nextStatus: Record<string, { label: string; status: string; color: string }[]> = {
+    pending: [
+      { label: 'Atribuir', status: 'assigned', color: 'text-blue-400 bg-blue-400/10 border-blue-400/20' },
+      { label: 'Cancelar', status: 'cancelled', color: 'text-red-400 bg-red-400/10 border-red-400/20' },
+    ],
+    assigned: [
+      { label: 'Iniciar', status: 'in_progress', color: 'text-purple-400 bg-purple-400/10 border-purple-400/20' },
+      { label: 'Voltar', status: 'pending', color: 'text-amber-400 bg-amber-400/10 border-amber-400/20' },
+    ],
+    in_progress: [
+      { label: 'Concluir', status: 'done', color: 'text-harbor-green bg-harbor-green/10 border-harbor-green/20' },
+      { label: 'Voltar', status: 'pending', color: 'text-amber-400 bg-amber-400/10 border-amber-400/20' },
+    ],
+    done: [],
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -281,6 +307,18 @@ export default function TasksPage() {
                     {task.forklift_id && (
                       <div className="mt-2 text-[10px] text-blue-400 bg-blue-400/10 px-2 py-0.5 rounded w-fit">
                         {task.forklift_id.slice(0, 6)}
+                      </div>
+                    )}
+
+                    {/* Status actions */}
+                    {(nextStatus[task.status] || []).length > 0 && (
+                      <div className="mt-3 pt-2 border-t border-harbor-border flex gap-1">
+                        {(nextStatus[task.status] || []).map((action) => (
+                          <button key={action.status} onClick={() => changeStatus(task.id, action.status)}
+                            className={`flex-1 px-2 py-1 text-[10px] font-medium rounded border ${action.color} hover:opacity-80 transition-opacity`}>
+                            {action.label}
+                          </button>
+                        ))}
                       </div>
                     )}
                   </div>

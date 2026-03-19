@@ -18,6 +18,7 @@ from app.middleware.tenant import get_current_tenant
 from app.models.tenant import Tenant
 from app.models.user import User
 from app.schemas.auth import (
+    CreateUserRequest,
     LoginRequest,
     MeResponse,
     RefreshRequest,
@@ -136,3 +137,69 @@ async def me(
         user=UserResponse.model_validate(user),
         tenant=TenantResponse.model_validate(tenant),
     )
+
+
+@router.get("/users", response_model=list[UserResponse])
+async def list_users(
+    user: User = Depends(get_current_user),
+    tenant: Tenant = Depends(get_current_tenant),
+    db: AsyncSession = Depends(get_db),
+):
+    if user.role not in ("admin", "supervisor"):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Permissão insuficiente")
+    result = await db.execute(select(User).where(User.tenant_id == tenant.id).order_by(User.created_at.desc()))
+    return result.scalars().all()
+
+
+@router.post("/users", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+async def create_user(
+    body: CreateUserRequest,
+    user: User = Depends(get_current_user),
+    tenant: Tenant = Depends(get_current_tenant),
+    db: AsyncSession = Depends(get_db),
+):
+    """Admin creates a new user (operator/supervisor) in their tenant."""
+    if user.role != "admin":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Apenas administradores podem criar usuários")
+    if body.role not in ("operator", "supervisor", "admin"):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Role inválido")
+
+    existing = await db.execute(select(User).where(User.email == body.email))
+    if existing.scalar_one_or_none():
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Este email já está cadastrado")
+
+    new_user = User(
+        tenant_id=tenant.id,
+        email=body.email,
+        password_hash=hash_password(body.password),
+        full_name=body.full_name,
+        role=body.role,
+        active=True,
+    )
+    db.add(new_user)
+    await db.flush()
+    await db.refresh(new_user)
+    return new_user
+
+
+@router.put("/users/{user_id}/role")
+async def update_user_role(
+    user_id: uuid.UUID,
+    role: str,
+    user: User = Depends(get_current_user),
+    tenant: Tenant = Depends(get_current_tenant),
+    db: AsyncSession = Depends(get_db),
+):
+    if user.role != "admin":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Apenas administradores")
+    if role not in ("admin", "supervisor", "operator"):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Role inválido")
+
+    result = await db.execute(select(User).where(User.id == user_id, User.tenant_id == tenant.id))
+    target = result.scalar_one_or_none()
+    if not target:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuário não encontrado")
+
+    target.role = role
+    await db.flush()
+    return {"status": "ok", "role": role}

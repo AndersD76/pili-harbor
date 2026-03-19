@@ -54,3 +54,10 @@ class RegisterRequest(BaseModel):
     company_name: str
     email: EmailStr
     password: str
+
+
+class CreateUserRequest(BaseModel):
+    full_name: str
+    email: EmailStr
+    password: str
+    role: str = "operator"

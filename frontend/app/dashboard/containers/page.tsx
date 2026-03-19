@@ -71,6 +71,26 @@ export default function ContainersPage() {
     }
   }
 
+  async function handleDelete(containerId: string, code: string) {
+    if (!yardId || !confirm(`Excluir container ${code}?`)) return
+    try {
+      await api.delete(`/api/v1/yards/${yardId}/containers/${containerId}`)
+      loadContainers(yardId)
+    } catch (err: any) {
+      alert(err.message || 'Erro ao excluir')
+    }
+  }
+
+  async function handleStatusChange(containerId: string, status: string) {
+    if (!yardId) return
+    try {
+      await api.put(`/api/v1/yards/${yardId}/containers/${containerId}`, { status })
+      loadContainers(yardId)
+    } catch (err: any) {
+      alert(err.message || 'Erro ao atualizar status')
+    }
+  }
+
   const filtered = containers.filter((c) =>
     c.code.toLowerCase().includes(search.toLowerCase()) ||
     (c.description || '').toLowerCase().includes(search.toLowerCase())
@@ -225,6 +245,7 @@ export default function ContainersPage() {
                   <th className="text-left px-4 py-3 text-xs text-harbor-muted uppercase tracking-wider font-medium">Posição</th>
                   <th className="text-left px-4 py-3 text-xs text-harbor-muted uppercase tracking-wider font-medium">Peso</th>
                   <th className="text-left px-4 py-3 text-xs text-harbor-muted uppercase tracking-wider font-medium">Último Sinal</th>
+                  <th className="text-right px-4 py-3 text-xs text-harbor-muted uppercase tracking-wider font-medium">Ações</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-harbor-border">
@@ -250,6 +271,25 @@ export default function ContainersPage() {
                       </td>
                       <td className="px-4 py-3 text-xs text-harbor-muted">
                         {c.last_seen_at ? new Date(c.last_seen_at).toLocaleString('pt-BR') : '-'}
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          <select
+                            value={c.status}
+                            onChange={(e) => handleStatusChange(c.id, e.target.value)}
+                            className="text-[10px] bg-harbor-bg border border-harbor-border rounded px-1.5 py-1 text-harbor-text focus:outline-none"
+                          >
+                            <option value="stored">Armazenado</option>
+                            <option value="in_transit">Em Trânsito</option>
+                            <option value="missing">Sem Sinal</option>
+                          </select>
+                          <button onClick={() => handleDelete(c.id, c.code)}
+                            className="p-1.5 text-harbor-muted hover:text-red-400 transition-colors" title="Excluir">
+                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   )

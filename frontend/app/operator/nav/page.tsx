@@ -44,10 +44,10 @@ export default function OperatorNavPage() {
     async function init() {
       try {
         const me = await api.get<{ user: { id: string } }>('/api/v1/auth/me')
-        // Find forklift assigned to this operator - for now use localStorage
         const fId = localStorage.getItem('operator_forklift_id')
         if (!fId) {
-          setLoading(false)
+          // No forklift selected, go to operator home
+          window.location.href = '/operator'
           return
         }
         setForkliftId(fId)
@@ -189,13 +189,23 @@ export default function OperatorNavPage() {
     )
   }
 
+  const { queue } = useForkliftStore()
+
+  function handleChangeForklift() {
+    localStorage.removeItem('operator_forklift_id')
+    window.location.href = '/operator'
+  }
+
   if (!currentTask) {
     return (
       <div className="min-h-screen bg-harbor-bg flex flex-col items-center justify-center p-8">
-        <div className="text-harbor-accent text-4xl mb-4">PILI HARBOR</div>
-        <div className="text-harbor-muted text-2xl text-center">
+        <div className="text-harbor-accent text-3xl font-bold tracking-[0.3em] mb-2">EAZE</div>
+        <div className="text-harbor-muted text-xl text-center mt-4 mb-8">
           Fila vazia — aguardando novas tarefas
         </div>
+        <button onClick={handleChangeForklift} className="px-6 py-3 text-sm text-harbor-muted border border-harbor-border rounded-lg hover:text-harbor-text transition-colors">
+          Trocar Empilhadeira
+        </button>
       </div>
     )
   }
@@ -205,8 +215,14 @@ export default function OperatorNavPage() {
   return (
     <div className="min-h-screen bg-harbor-bg flex flex-col items-center justify-between p-6 select-none">
       {/* Header */}
-      <div className="w-full text-center">
-        <h1 className="text-harbor-accent text-lg font-bold tracking-wider">PILI HARBOR</h1>
+      <div className="w-full flex items-center justify-between">
+        <button onClick={handleChangeForklift} className="p-2 text-harbor-muted hover:text-harbor-text transition-colors">
+          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+        </button>
+        <h1 className="text-harbor-accent text-lg font-bold tracking-[0.2em]">EAZE</h1>
+        <div className="w-10" /> {/* spacer */}
       </div>
 
       {/* Navigation Arrow */}
@@ -229,15 +245,33 @@ export default function OperatorNavPage() {
         instructions={currentTask.ai_instructions}
       />
 
-      {/* Arrive button */}
-      {isClose && (
-        <button
-          onClick={handleArrived}
-          className="w-full py-5 bg-harbor-green text-harbor-bg text-2xl font-bold rounded-lg mt-4 active:bg-green-500"
-        >
-          Cheguei
-        </button>
+      {/* Queue info */}
+      {queue.length > 0 && (
+        <div className="w-full mt-3 px-4 py-2.5 bg-harbor-surface border border-harbor-border rounded-lg text-center">
+          <span className="text-xs text-harbor-muted">
+            +{queue.length} tarefa{queue.length > 1 ? 's' : ''} na fila
+          </span>
+        </div>
       )}
+
+      {/* Action buttons */}
+      <div className="w-full mt-4 space-y-3">
+        {isClose ? (
+          <button
+            onClick={handleArrived}
+            className="w-full py-5 bg-harbor-green text-harbor-bg text-2xl font-bold rounded-xl active:bg-green-500 transition-colors"
+          >
+            Cheguei
+          </button>
+        ) : (
+          <button
+            onClick={handleArrived}
+            className="w-full py-4 bg-harbor-surface border border-harbor-border text-harbor-text text-lg font-semibold rounded-xl active:bg-harbor-bg transition-colors"
+          >
+            Concluir Tarefa
+          </button>
+        )}
+      </div>
     </div>
   )
 }

@@ -31,7 +31,7 @@ function LoginPageInner() {
     try {
       const data = await login(email, password)
       if (isEaze || data.user.role === 'operator') {
-        router.push('/operator/nav')
+        router.push('/operator')
       } else {
         router.push('/dashboard')
       }
