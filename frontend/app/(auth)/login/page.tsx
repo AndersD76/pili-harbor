@@ -57,8 +57,8 @@ function LoginPageInner() {
         email,
         password,
       })
-      Cookies.set('access_token', data.access_token, { expires: 1 })
-      Cookies.set('refresh_token', data.refresh_token, { expires: 30 })
+      Cookies.set('access_token', data.access_token, { expires: 1, path: '/' })
+      Cookies.set('refresh_token', data.refresh_token, { expires: 30, path: '/' })
       router.push('/dashboard')
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Erro ao criar conta')

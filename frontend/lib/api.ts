@@ -55,8 +55,8 @@ export async function login(email: string, password: string) {
     user: { id: string; full_name: string; role: string; tenant_id: string }
   }>('/api/v1/auth/login', { email, password })
 
-  Cookies.set('access_token', data.access_token, { expires: 1 })
-  Cookies.set('refresh_token', data.refresh_token, { expires: 30 })
+  Cookies.set('access_token', data.access_token, { expires: 1, path: '/' })
+  Cookies.set('refresh_token', data.refresh_token, { expires: 30, path: '/' })
   return data
 }
 
