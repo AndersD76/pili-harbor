@@ -31,7 +31,7 @@ COPY --from=frontend-build /frontend/.next/static ./frontend/.next/static
 COPY --from=frontend-build /frontend/public ./frontend/public
 
 # Create startup script
-RUN printf '#!/bin/sh\ncd /app/frontend && HOSTNAME=0.0.0.0 PORT=3000 node server.js &\nsleep 2\ncd /app/backend && alembic upgrade head 2>&1 || echo "Migration skipped"\nexec uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}\n' > /app/start.sh && chmod +x /app/start.sh
+RUN printf '#!/bin/sh\ncd /app/frontend && HOSTNAME=0.0.0.0 PORT=3000 node server.js &\nsleep 2\ncd /app/backend && alembic upgrade head 2>&1 || echo "Migration skipped"\npython -m seed_demo 2>&1 || echo "Seed skipped"\nexec uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}\n' > /app/start.sh && chmod +x /app/start.sh
 
 EXPOSE 8000
 
