@@ -54,41 +54,50 @@ export default function ControlCenter() {
   const { setYard, setContainers, setForklifts, updateContainer, updateForklift, selectedContainerId, selectContainer, containers } = useYardStore()
   const { setTasks, updateTask, addAlert, tasks, alerts } = useTasksStore()
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    // Load initial state
-    api.get<YardStateResponse>(`/api/v1/yards/${yardId}/state`).then((data) => {
-      setYard({
-        id: data.yard.id,
-        name: data.yard.name,
-        width_meters: data.yard.width_meters,
-        height_meters: data.yard.height_meters,
+    // Save yardId to localStorage so other pages can use it
+    localStorage.setItem('current_yard_id', yardId)
+
+    api.get<YardStateResponse>(`/api/v1/yards/${yardId}/state`)
+      .then((data) => {
+        localStorage.setItem('current_yard_name', data.yard.name)
+        setYard({
+          id: data.yard.id,
+          name: data.yard.name,
+          width_meters: data.yard.width_meters,
+          height_meters: data.yard.height_meters,
+        })
+        setContainers(
+          data.containers.map((c) => ({
+            id: c.id,
+            code: c.code,
+            x: c.x_meters,
+            y: c.y_meters,
+            status: c.status,
+            confidence: c.position_confidence,
+            weight_kg: c.weight_kg,
+          }))
+        )
+        setForklifts(
+          data.forklifts.map((f) => ({
+            id: f.id,
+            code: f.code,
+            x: f.x_meters,
+            y: f.y_meters,
+            heading: f.heading_degrees,
+            status: f.status,
+            operator_id: f.operator_id,
+          }))
+        )
+        setTasks(data.tasks)
+        setLoading(false)
       })
-      setContainers(
-        data.containers.map((c) => ({
-          id: c.id,
-          code: c.code,
-          x: c.x_meters,
-          y: c.y_meters,
-          status: c.status,
-          confidence: c.position_confidence,
-          weight_kg: c.weight_kg,
-        }))
-      )
-      setForklifts(
-        data.forklifts.map((f) => ({
-          id: f.id,
-          code: f.code,
-          x: f.x_meters,
-          y: f.y_meters,
-          heading: f.heading_degrees,
-          status: f.status,
-          operator_id: f.operator_id,
-        }))
-      )
-      setTasks(data.tasks)
-      setLoading(false)
-    })
+      .catch((err) => {
+        setError(err.message || 'Erro ao carregar pátio')
+        setLoading(false)
+      })
 
     // Connect WebSocket
     wsClient.connect(yardId)
@@ -142,7 +151,29 @@ export default function ControlCenter() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen">
-        <div className="text-harbor-muted">Carregando pátio...</div>
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-10 h-10 border-2 border-harbor-accent border-t-transparent rounded-full animate-spin" />
+          <p className="text-harbor-muted text-sm">Carregando centro de controle...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-center max-w-md">
+          <div className="w-16 h-16 rounded-full bg-red-500/10 flex items-center justify-center mx-auto mb-4">
+            <svg className="w-8 h-8 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <h3 className="text-harbor-text font-semibold mb-2">Erro ao carregar pátio</h3>
+          <p className="text-harbor-muted text-sm mb-4">{error}</p>
+          <button onClick={() => window.location.reload()} className="px-4 py-2 bg-harbor-accent text-white rounded-lg text-sm hover:bg-red-600 transition-colors">
+            Tentar novamente
+          </button>
+        </div>
       </div>
     )
   }
@@ -153,17 +184,20 @@ export default function ControlCenter() {
       <div className="h-14 border-b border-harbor-border flex items-center px-6 gap-8 bg-harbor-surface">
         <h2 className="text-sm font-semibold text-harbor-text">{useYardStore.getState().yard?.name}</h2>
         <div className="flex gap-6 ml-auto text-xs font-mono">
-          <div>
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-harbor-green" />
             <span className="text-harbor-muted">Containers:</span>{' '}
-            <span className="text-harbor-green">{monitoredCount}</span>
+            <span className="text-harbor-green font-bold">{monitoredCount}</span>
           </div>
-          <div>
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-blue-400" />
             <span className="text-harbor-muted">Empilhadeiras:</span>{' '}
-            <span className="text-harbor-green">{activeForklifts}</span>
+            <span className="text-blue-400 font-bold">{activeForklifts}</span>
           </div>
-          <div>
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-amber-400" />
             <span className="text-harbor-muted">Tarefas ativas:</span>{' '}
-            <span className="text-yellow-400">{activeTasks.length}</span>
+            <span className="text-amber-400 font-bold">{activeTasks.length}</span>
           </div>
         </div>
       </div>
@@ -179,15 +213,33 @@ export default function ControlCenter() {
           {/* Selected container details */}
           {selectedContainer && (
             <div className="p-4 border-b border-harbor-border">
-              <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center justify-between mb-3">
                 <h3 className="text-sm font-bold text-harbor-text">{selectedContainer.code}</h3>
-                <button onClick={() => selectContainer(null)} className="text-harbor-muted text-xs hover:text-harbor-text">✕</button>
+                <button onClick={() => selectContainer(null)} className="text-harbor-muted text-xs hover:text-harbor-text transition-colors p-1">
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
               </div>
-              <div className="text-xs text-harbor-muted space-y-1 font-mono">
-                <p>Status: <span className={selectedContainer.status === 'stored' ? 'text-harbor-green' : 'text-yellow-400'}>{selectedContainer.status}</span></p>
-                <p>Posição: {selectedContainer.x?.toFixed(1)}m, {selectedContainer.y?.toFixed(1)}m</p>
-                <p>Confiança: {((selectedContainer.confidence || 0) * 100).toFixed(0)}%</p>
-                {selectedContainer.weight_kg && <p>Peso: {selectedContainer.weight_kg}kg</p>}
+              <div className="text-xs text-harbor-muted space-y-2 font-mono">
+                <div className="flex justify-between">
+                  <span>Status</span>
+                  <span className={selectedContainer.status === 'stored' ? 'text-harbor-green' : 'text-amber-400'}>{selectedContainer.status}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Posição</span>
+                  <span className="text-harbor-text">{selectedContainer.x?.toFixed(1)}m, {selectedContainer.y?.toFixed(1)}m</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Confiança</span>
+                  <span className="text-harbor-text">{((selectedContainer.confidence || 0) * 100).toFixed(0)}%</span>
+                </div>
+                {selectedContainer.weight_kg && (
+                  <div className="flex justify-between">
+                    <span>Peso</span>
+                    <span className="text-harbor-text">{selectedContainer.weight_kg}kg</span>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -197,12 +249,12 @@ export default function ControlCenter() {
             <h3 className="text-xs font-semibold text-harbor-muted mb-3 uppercase tracking-wider">Tarefas Ativas</h3>
             <div className="space-y-2">
               {activeTasks.slice(0, 10).map((task) => (
-                <div key={task.id} className="p-2 bg-harbor-bg rounded border border-harbor-border text-xs">
-                  <div className="flex justify-between">
+                <div key={task.id} className="p-2.5 bg-harbor-bg rounded-lg border border-harbor-border text-xs">
+                  <div className="flex justify-between items-center">
                     <span className="text-harbor-text font-mono">{task.container_id.slice(0, 8)}</span>
-                    <span className={`px-1.5 py-0.5 rounded text-[10px] ${
-                      task.status === 'in_progress' ? 'bg-yellow-900/30 text-yellow-400' :
-                      task.status === 'assigned' ? 'bg-blue-900/30 text-blue-400' :
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${
+                      task.status === 'in_progress' ? 'bg-purple-400/10 text-purple-400 border border-purple-400/20' :
+                      task.status === 'assigned' ? 'bg-blue-400/10 text-blue-400 border border-blue-400/20' :
                       'bg-harbor-border text-harbor-muted'
                     }`}>
                       {task.status}
@@ -211,7 +263,7 @@ export default function ControlCenter() {
                 </div>
               ))}
               {activeTasks.length === 0 && (
-                <p className="text-xs text-harbor-muted">Nenhuma tarefa ativa</p>
+                <p className="text-xs text-harbor-muted py-4 text-center">Nenhuma tarefa ativa</p>
               )}
             </div>
           </div>
@@ -221,13 +273,13 @@ export default function ControlCenter() {
             <h3 className="text-xs font-semibold text-harbor-muted mb-3 uppercase tracking-wider">Alertas</h3>
             <div className="space-y-2">
               {alerts.slice(0, 10).map((alert) => (
-                <div key={alert.id} className="p-2 bg-red-900/10 border border-red-900/30 rounded text-xs text-red-400">
+                <div key={alert.id} className="p-2.5 bg-red-900/10 border border-red-900/30 rounded-lg text-xs text-red-400">
                   <p className="font-mono text-[10px] text-red-600 mb-1">{alert.code}</p>
                   <p>{alert.message}</p>
                 </div>
               ))}
               {alerts.length === 0 && (
-                <p className="text-xs text-harbor-muted">Nenhum alerta</p>
+                <p className="text-xs text-harbor-muted py-4 text-center">Nenhum alerta</p>
               )}
             </div>
           </div>

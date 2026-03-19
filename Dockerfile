@@ -30,10 +30,9 @@ COPY --from=frontend-build /frontend/.next/standalone ./frontend/
 COPY --from=frontend-build /frontend/.next/static ./frontend/.next/static
 COPY --from=frontend-build /frontend/public ./frontend/public
 
-# Debug: show what's in frontend dir
-RUN ls -la /app/frontend/ && echo "---" && ls -la /app/frontend/.next/ 2>/dev/null || true
+# Create startup script
+RUN printf '#!/bin/sh\ncd /app/frontend && HOSTNAME=0.0.0.0 PORT=3000 node server.js &\nsleep 2\ncd /app/backend && exec uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}\n' > /app/start.sh && chmod +x /app/start.sh
 
 EXPOSE 8000
 
-# Inline start command to avoid CRLF issues
-CMD sh -c "cd /app/frontend && HOSTNAME=0.0.0.0 PORT=3000 node server.js & sleep 2 && cd /app/backend && uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"
+CMD ["/app/start.sh"]
