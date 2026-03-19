@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     ANTHROPIC_API_KEY: str = ""
     JWT_SECRET: str = "change-me-in-production"
     JWT_EXPIRE_MINUTES: int = 1440
+    ALLOWED_ORIGINS: str = "*"
     ENVIRONMENT: str = "development"
 
     # Position engine defaults
