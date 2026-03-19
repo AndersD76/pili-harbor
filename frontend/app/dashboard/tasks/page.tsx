@@ -44,29 +44,71 @@ const typeLabels: Record<string, string> = {
   inspect: 'Inspecionar',
 }
 
+interface ContainerOption { id: string; code: string }
+interface ForkliftOption { id: string; code: string }
+
 export default function TasksPage() {
   const router = useRouter()
   const [tasks, setTasks] = useState<Task[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [yardId, setYardId] = useState<string | null>(null)
+  const [showCreate, setShowCreate] = useState(false)
+  const [creating, setCreating] = useState(false)
+  const [createError, setCreateError] = useState<string | null>(null)
+  const [containers, setContainers] = useState<ContainerOption[]>([])
+  const [forkliftOptions, setForkliftOptions] = useState<ForkliftOption[]>([])
+  const [taskForm, setTaskForm] = useState({ container_id: '', type: 'relocate', priority: 5, destination_label: '', notes: '', forklift_id: '' })
 
   useEffect(() => {
-    const yardId = localStorage.getItem('current_yard_id')
-    if (!yardId) {
-      router.push('/dashboard')
-      return
-    }
-
-    api.get<Task[]>(`/api/v1/yards/${yardId}/tasks`)
-      .then((data) => {
-        setTasks(data)
-        setLoading(false)
-      })
-      .catch((err) => {
-        setError(err.message || 'Erro ao carregar tarefas')
-        setLoading(false)
-      })
+    const id = localStorage.getItem('current_yard_id')
+    if (!id) { router.push('/dashboard'); return }
+    setYardId(id)
+    loadTasks(id)
   }, [router])
+
+  function loadTasks(id: string) {
+    api.get<Task[]>(`/api/v1/yards/${id}/tasks`)
+      .then((data) => { setTasks(data); setLoading(false) })
+      .catch((err) => { setError(err.message || 'Erro ao carregar tarefas'); setLoading(false) })
+  }
+
+  async function openCreateModal() {
+    if (!yardId) return
+    setShowCreate(true)
+    try {
+      const [c, f] = await Promise.all([
+        api.get<ContainerOption[]>(`/api/v1/yards/${yardId}/containers`),
+        api.get<ForkliftOption[]>(`/api/v1/yards/${yardId}/forklifts`),
+      ])
+      setContainers(c)
+      setForkliftOptions(f)
+    } catch { /* ignore */ }
+  }
+
+  async function handleCreateTask(e: React.FormEvent) {
+    e.preventDefault()
+    if (!yardId) return
+    setCreating(true)
+    setCreateError(null)
+    try {
+      await api.post(`/api/v1/yards/${yardId}/tasks`, {
+        container_id: taskForm.container_id,
+        type: taskForm.type,
+        priority: taskForm.priority,
+        destination_label: taskForm.destination_label || null,
+        notes: taskForm.notes || null,
+        forklift_id: taskForm.forklift_id || null,
+      })
+      setShowCreate(false)
+      setTaskForm({ container_id: '', type: 'relocate', priority: 5, destination_label: '', notes: '', forklift_id: '' })
+      loadTasks(yardId)
+    } catch (err: any) {
+      setCreateError(err.message || 'Erro ao criar tarefa')
+    } finally {
+      setCreating(false)
+    }
+  }
 
   if (loading) {
     return (
@@ -100,7 +142,73 @@ export default function TasksPage() {
 
   const totalTasks = tasks.length
 
+  const selectClass = "w-full px-4 py-3 bg-harbor-bg border border-harbor-border rounded-lg text-harbor-text focus:border-harbor-accent focus:outline-none appearance-none"
+  const inputClass = "w-full px-4 py-3 bg-harbor-bg border border-harbor-border rounded-lg text-harbor-text focus:border-harbor-accent focus:outline-none"
+
   return (
+    <>
+      {showCreate && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="bg-harbor-surface border border-harbor-border rounded-2xl w-full max-w-lg mx-4 shadow-2xl">
+            <div className="flex items-center justify-between p-6 border-b border-harbor-border">
+              <h3 className="text-lg font-bold text-harbor-text">Nova Tarefa</h3>
+              <button onClick={() => setShowCreate(false)} className="text-harbor-muted hover:text-harbor-text transition-colors">
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+            <form onSubmit={handleCreateTask} className="p-6 space-y-4">
+              {createError && <div className="bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3 rounded-lg text-sm">{createError}</div>}
+              <div>
+                <label className="block text-xs text-harbor-muted uppercase tracking-wider mb-2">Container *</label>
+                <select value={taskForm.container_id} onChange={(e) => setTaskForm({ ...taskForm, container_id: e.target.value })} className={selectClass} required>
+                  <option value="">Selecione um container</option>
+                  {containers.map((c) => <option key={c.id} value={c.id}>{c.code}</option>)}
+                </select>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs text-harbor-muted uppercase tracking-wider mb-2">Tipo *</label>
+                  <select value={taskForm.type} onChange={(e) => setTaskForm({ ...taskForm, type: e.target.value })} className={selectClass}>
+                    <option value="relocate">Relocar</option>
+                    <option value="load">Carregar</option>
+                    <option value="unload">Descarregar</option>
+                    <option value="inspect">Inspecionar</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs text-harbor-muted uppercase tracking-wider mb-2">Prioridade (1-10)</label>
+                  <input type="number" value={taskForm.priority} onChange={(e) => setTaskForm({ ...taskForm, priority: Number(e.target.value) })}
+                    className={inputClass + ' font-mono'} min={1} max={10} />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs text-harbor-muted uppercase tracking-wider mb-2">Empilhadeira (opcional)</label>
+                <select value={taskForm.forklift_id} onChange={(e) => setTaskForm({ ...taskForm, forklift_id: e.target.value })} className={selectClass}>
+                  <option value="">Nenhuma (pendente)</option>
+                  {forkliftOptions.map((f) => <option key={f.id} value={f.id}>{f.code}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs text-harbor-muted uppercase tracking-wider mb-2">Destino</label>
+                <input type="text" value={taskForm.destination_label} onChange={(e) => setTaskForm({ ...taskForm, destination_label: e.target.value })}
+                  className={inputClass} placeholder="Ex: Bloco A, Posição 12" />
+              </div>
+              <div>
+                <label className="block text-xs text-harbor-muted uppercase tracking-wider mb-2">Observações</label>
+                <input type="text" value={taskForm.notes} onChange={(e) => setTaskForm({ ...taskForm, notes: e.target.value })}
+                  className={inputClass} placeholder="Ex: Container frágil" />
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button type="button" onClick={() => setShowCreate(false)} className="flex-1 py-3 text-sm font-medium text-harbor-muted bg-harbor-bg border border-harbor-border rounded-lg hover:text-harbor-text transition-colors">Cancelar</button>
+                <button type="submit" disabled={creating} className="flex-1 py-3 text-sm font-bold text-white bg-harbor-accent rounded-lg hover:bg-red-600 disabled:opacity-50 transition-colors">
+                  {creating ? 'Criando...' : 'Criar Tarefa'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
     <div className="p-6 h-full flex flex-col">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
@@ -108,6 +216,10 @@ export default function TasksPage() {
           <h2 className="text-xl font-bold text-harbor-text">Tarefas</h2>
           <p className="text-harbor-muted text-sm mt-0.5">{totalTasks} tarefa{totalTasks !== 1 ? 's' : ''} no total</p>
         </div>
+        <button onClick={openCreateModal} className="px-4 py-2.5 bg-harbor-accent text-white text-sm font-semibold rounded-lg hover:bg-red-600 transition-colors inline-flex items-center gap-2">
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+          Nova Tarefa
+        </button>
       </div>
 
       {/* Kanban board */}
@@ -185,5 +297,6 @@ export default function TasksPage() {
         })}
       </div>
     </div>
+    </>
   )
 }

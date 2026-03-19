@@ -27,24 +27,41 @@ export default function ForkliftsPage() {
   const [forklifts, setForklifts] = useState<Forklift[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [showCreate, setShowCreate] = useState(false)
+  const [creating, setCreating] = useState(false)
+  const [createError, setCreateError] = useState<string | null>(null)
+  const [code, setCode] = useState('')
+  const [yardId, setYardId] = useState<string | null>(null)
 
   useEffect(() => {
-    const yardId = localStorage.getItem('current_yard_id')
-    if (!yardId) {
-      router.push('/dashboard')
-      return
-    }
-
-    api.get<Forklift[]>(`/api/v1/yards/${yardId}/forklifts`)
-      .then((data) => {
-        setForklifts(data)
-        setLoading(false)
-      })
-      .catch((err) => {
-        setError(err.message || 'Erro ao carregar empilhadeiras')
-        setLoading(false)
-      })
+    const id = localStorage.getItem('current_yard_id')
+    if (!id) { router.push('/dashboard'); return }
+    setYardId(id)
+    loadForklifts(id)
   }, [router])
+
+  function loadForklifts(id: string) {
+    api.get<Forklift[]>(`/api/v1/yards/${id}/forklifts`)
+      .then((data) => { setForklifts(data); setLoading(false) })
+      .catch((err) => { setError(err.message || 'Erro ao carregar empilhadeiras'); setLoading(false) })
+  }
+
+  async function handleCreate(e: React.FormEvent) {
+    e.preventDefault()
+    if (!yardId) return
+    setCreating(true)
+    setCreateError(null)
+    try {
+      await api.post(`/api/v1/yards/${yardId}/forklifts`, { code })
+      setShowCreate(false)
+      setCode('')
+      loadForklifts(yardId)
+    } catch (err: any) {
+      setCreateError(err.message || 'Erro ao cadastrar empilhadeira')
+    } finally {
+      setCreating(false)
+    }
+  }
 
   if (loading) {
     return (
@@ -80,6 +97,35 @@ export default function ForkliftsPage() {
   const offlineCount = forklifts.filter(f => f.status === 'offline').length
 
   return (
+    <>
+      {showCreate && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="bg-harbor-surface border border-harbor-border rounded-2xl w-full max-w-md mx-4 shadow-2xl">
+            <div className="flex items-center justify-between p-6 border-b border-harbor-border">
+              <h3 className="text-lg font-bold text-harbor-text">Nova Empilhadeira</h3>
+              <button onClick={() => setShowCreate(false)} className="text-harbor-muted hover:text-harbor-text transition-colors">
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+            <form onSubmit={handleCreate} className="p-6 space-y-4">
+              {createError && <div className="bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3 rounded-lg text-sm">{createError}</div>}
+              <div>
+                <label className="block text-xs text-harbor-muted uppercase tracking-wider mb-2">Código da Empilhadeira *</label>
+                <input type="text" value={code} onChange={(e) => setCode(e.target.value)}
+                  className="w-full px-4 py-3 bg-harbor-bg border border-harbor-border rounded-lg text-harbor-text font-mono focus:border-harbor-accent focus:outline-none"
+                  placeholder="Ex: EMP-01" required />
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button type="button" onClick={() => setShowCreate(false)} className="flex-1 py-3 text-sm font-medium text-harbor-muted bg-harbor-bg border border-harbor-border rounded-lg hover:text-harbor-text transition-colors">Cancelar</button>
+                <button type="submit" disabled={creating} className="flex-1 py-3 text-sm font-bold text-white bg-harbor-accent rounded-lg hover:bg-red-600 disabled:opacity-50 transition-colors">
+                  {creating ? 'Cadastrando...' : 'Cadastrar'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
     <div className="p-6">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
@@ -89,6 +135,10 @@ export default function ForkliftsPage() {
             {forklifts.length} total &middot; {activeCount} ativa{activeCount !== 1 ? 's' : ''} &middot; {offlineCount} offline
           </p>
         </div>
+        <button onClick={() => setShowCreate(true)} className="px-4 py-2.5 bg-harbor-accent text-white text-sm font-semibold rounded-lg hover:bg-red-600 transition-colors inline-flex items-center gap-2">
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+          Nova Empilhadeira
+        </button>
       </div>
 
       {forklifts.length === 0 ? (
@@ -99,9 +149,13 @@ export default function ForkliftsPage() {
             </svg>
           </div>
           <h3 className="text-lg font-semibold text-harbor-text mb-2">Nenhuma empilhadeira</h3>
-          <p className="text-harbor-muted text-sm text-center max-w-xs">
+          <p className="text-harbor-muted text-sm text-center max-w-xs mb-6">
             Cadastre empilhadeiras para começar a gerenciar operações no pátio.
           </p>
+          <button onClick={() => setShowCreate(true)} className="px-5 py-2.5 bg-harbor-accent text-white text-sm font-semibold rounded-lg hover:bg-red-600 transition-colors inline-flex items-center gap-2">
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+            Cadastrar Empilhadeira
+          </button>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -167,5 +221,6 @@ export default function ForkliftsPage() {
         </div>
       )}
     </div>
+    </>
   )
 }
