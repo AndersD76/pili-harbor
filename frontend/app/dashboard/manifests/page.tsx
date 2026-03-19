@@ -38,7 +38,15 @@ export default function ManifestsPage() {
   function loadManifests(id: string) {
     api.get<Manifest[]>(`/api/v1/yards/${id}/manifests`)
       .then((data) => { setManifests(data); setLoading(false) })
-      .catch((err) => { setError(err.message || 'Erro ao carregar manifestos'); setLoading(false) })
+      .catch((err) => {
+        if (err.message?.includes('não encontrado')) {
+          localStorage.removeItem('current_yard_id')
+          localStorage.removeItem('current_yard_name')
+          router.push('/dashboard')
+          return
+        }
+        setError(err.message || 'Erro ao carregar manifestos'); setLoading(false)
+      })
   }
 
   async function openCreateModal() {
