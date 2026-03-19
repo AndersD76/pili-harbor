@@ -2,8 +2,9 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { api, getToken } from '@/lib/api'
-import { wsClient } from '@/lib/websocket'
 import { useForkliftStore } from '@/lib/store/forklift'
+
+let wsClient: any = null
 import NavigationArrow from '@/components/operator/NavigationArrow'
 import TaskCard from '@/components/operator/TaskCard'
 
@@ -112,9 +113,14 @@ export default function OperatorNavPage() {
     const yardId = localStorage.getItem('current_yard_id')
     if (!yardId) return
 
-    wsClient.connect(yardId)
+    try {
+      import('@/lib/websocket').then((mod) => {
+        wsClient = mod.wsClient
+        wsClient?.connect(yardId)
+      }).catch(() => {})
+    } catch {}
 
-    const unsub = wsClient.on('position_update', (msg: any) => {
+    const unsub = wsClient?.on('position_update', (msg: any) => {
       if (msg.entity_type === 'forklift' && msg.entity_id === forkliftId) {
         setMyPosition({
           x: msg.data.x,
@@ -125,8 +131,8 @@ export default function OperatorNavPage() {
     })
 
     return () => {
-      unsub()
-      wsClient.disconnect()
+      unsub?.()
+      wsClient?.disconnect()
     }
   }, [forkliftId])
 
