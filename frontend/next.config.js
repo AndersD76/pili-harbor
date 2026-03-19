@@ -1,7 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: 'standalone',
-  turbopack: {},
   webpack: (config) => {
     config.externals = [...(config.externals || []), { canvas: 'canvas' }]
     return config

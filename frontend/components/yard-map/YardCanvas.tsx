@@ -52,16 +52,16 @@ export default function YardCanvas() {
   }
 
   // Sort containers in each stack by level (top first for display)
-  for (const stack of stacks.values()) {
+  Array.from(stacks.values()).forEach((stack) => {
     stack.containers.sort((a, b) => b.stack_level - a.stack_level)
-  }
+  })
 
   // Group stacks by block
   const blocks = new Map<string, StackGroup[]>()
-  for (const stack of stacks.values()) {
+  Array.from(stacks.values()).forEach((stack) => {
     if (!blocks.has(stack.block)) blocks.set(stack.block, [])
     blocks.get(stack.block)!.push(stack)
-  }
+  })
 
   return (
     <div className="w-full h-full overflow-auto p-6">
