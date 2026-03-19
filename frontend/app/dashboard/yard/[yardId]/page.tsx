@@ -3,10 +3,16 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import { api } from '@/lib/api'
-import { wsClient } from '@/lib/websocket'
 import { useYardStore } from '@/lib/store/yard'
 import { useTasksStore } from '@/lib/store/tasks'
-import YardCanvas from '@/components/yard-map/YardCanvas'
+import dynamic from 'next/dynamic'
+
+const YardCanvas = dynamic(() => import('@/components/yard-map/YardCanvas'), { ssr: false })
+
+let wsClient: any = null
+if (typeof window !== 'undefined') {
+  import('@/lib/websocket').then((mod) => { wsClient = mod.wsClient }).catch(() => {})
+}
 
 interface YardStateResponse {
   yard: {
@@ -99,10 +105,10 @@ export default function ControlCenter() {
         setLoading(false)
       })
 
-    // Connect WebSocket
-    wsClient.connect(yardId)
+    // Connect WebSocket (safe - won't crash if WS_URL not configured)
+    try { wsClient?.connect(yardId) } catch {}
 
-    const unsub1 = wsClient.on('position_update', (msg: any) => {
+    const unsub1 = wsClient?.on('position_update', (msg: any) => {
       if (msg.entity_type === 'container') {
         updateContainer(msg.entity_id, {
           x: msg.data.x,
@@ -118,11 +124,11 @@ export default function ControlCenter() {
       }
     })
 
-    const unsub2 = wsClient.on('task_update', (msg: any) => {
+    const unsub2 = wsClient?.on('task_update', (msg: any) => {
       updateTask(msg.task_id, { status: msg.new_status })
     })
 
-    const unsub3 = wsClient.on('alert', (msg: any) => {
+    const unsub3 = wsClient?.on('alert', (msg: any) => {
       addAlert({
         id: Date.now().toString(),
         code: msg.code,
@@ -133,10 +139,10 @@ export default function ControlCenter() {
     })
 
     return () => {
-      unsub1()
-      unsub2()
-      unsub3()
-      wsClient.disconnect()
+      unsub1?.()
+      unsub2?.()
+      unsub3?.()
+      wsClient?.disconnect()
     }
   }, [yardId])
 

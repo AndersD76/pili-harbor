@@ -1,127 +1,119 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
-import dynamic from 'next/dynamic'
 import { useYardStore } from '@/lib/store/yard'
 
-// Dynamic import to avoid SSR issues with Konva
-const Stage = dynamic(() => import('react-konva').then((mod) => mod.Stage), { ssr: false })
-const Layer = dynamic(() => import('react-konva').then((mod) => mod.Layer), { ssr: false })
-const Rect = dynamic(() => import('react-konva').then((mod) => mod.Rect), { ssr: false })
-const Line = dynamic(() => import('react-konva').then((mod) => mod.Line), { ssr: false })
+const statusColors: Record<string, string> = {
+  stored: '#22c55e',
+  in_transit: '#eab308',
+  missing: '#ef4444',
+}
 
-const ContainerNode = dynamic(() => import('./ContainerNode'), { ssr: false })
-const ForkliftMarker = dynamic(() => import('./ForkliftMarker'), { ssr: false })
-
-const PADDING = 40
+const forkliftStatusColors: Record<string, string> = {
+  idle: '#3b82f6',
+  working: '#eab308',
+  offline: '#6b7280',
+  maintenance: '#6b7280',
+}
 
 export default function YardCanvas() {
-  const containerRef = useRef<HTMLDivElement>(null)
-  const [dimensions, setDimensions] = useState({ width: 800, height: 600 })
-  const { yard, containers, forklifts } = useYardStore()
-
-  useEffect(() => {
-    function updateSize() {
-      if (containerRef.current) {
-        setDimensions({
-          width: containerRef.current.offsetWidth,
-          height: containerRef.current.offsetHeight,
-        })
-      }
-    }
-    updateSize()
-    window.addEventListener('resize', updateSize)
-    return () => window.removeEventListener('resize', updateSize)
-  }, [])
+  const { yard, containers, forklifts, selectedContainerId, selectContainer } = useYardStore()
 
   if (!yard) return null
-
-  // Calculate scale to fit yard in canvas
-  const scaleX = (dimensions.width - PADDING * 2) / yard.width_meters
-  const scaleY = (dimensions.height - PADDING * 2) / yard.height_meters
-  const scale = Math.min(scaleX, scaleY)
-
-  function metersToPixels(x: number, y: number) {
-    return {
-      px: PADDING + x * scale,
-      py: PADDING + y * scale,
-    }
-  }
-
-  // Generate grid lines
-  const gridLines: number[][] = []
-  const gridStep = 10 // 10 meter grid
-  for (let x = 0; x <= yard.width_meters; x += gridStep) {
-    const { px: x1, py: y1 } = metersToPixels(x, 0)
-    const { px: x2, py: y2 } = metersToPixels(x, yard.height_meters)
-    gridLines.push([x1, y1, x2, y2])
-  }
-  for (let y = 0; y <= yard.height_meters; y += gridStep) {
-    const { px: x1, py: y1 } = metersToPixels(0, y)
-    const { px: x2, py: y2 } = metersToPixels(yard.width_meters, y)
-    gridLines.push([x1, y1, x2, y2])
-  }
 
   const containersArray = Array.from(containers.values())
   const forkliftsArray = Array.from(forklifts.values())
 
-  const yardBounds = metersToPixels(0, 0)
-  const yardEnd = metersToPixels(yard.width_meters, yard.height_meters)
-
   return (
-    <div ref={containerRef} className="w-full h-full">
-      <Stage width={dimensions.width} height={dimensions.height}>
-        <Layer>
-          {/* Yard boundary */}
-          <Rect
-            x={yardBounds.px}
-            y={yardBounds.py}
-            width={yardEnd.px - yardBounds.px}
-            height={yardEnd.py - yardBounds.py}
-            stroke="#1a2332"
-            strokeWidth={2}
-            fill="#0a0f14"
-          />
+    <div className="w-full h-full relative bg-[#060a0e] overflow-hidden">
+      {/* Grid pattern */}
+      <div
+        className="absolute inset-0 opacity-10"
+        style={{
+          backgroundImage: 'linear-gradient(rgba(255,255,255,0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.08) 1px, transparent 1px)',
+          backgroundSize: `${800 / yard.width_meters * 10}px ${600 / yard.height_meters * 10}px`,
+        }}
+      />
 
-          {/* Grid */}
-          {gridLines.map((points, i) => (
-            <Line key={i} points={points} stroke="#111820" strokeWidth={0.5} />
-          ))}
+      {/* Yard boundary label */}
+      <div className="absolute top-2 left-3 text-[10px] font-mono text-gray-600">
+        {yard.name} ({yard.width_meters}m × {yard.height_meters}m)
+      </div>
 
-          {/* Containers */}
-          {containersArray.map((container) => {
-            if (container.x == null || container.y == null) return null
-            const { px, py } = metersToPixels(container.x, container.y)
-            return (
-              <ContainerNode
-                key={container.id}
-                id={container.id}
-                code={container.code}
-                x={px}
-                y={py}
-                status={container.status}
-                scale={scale}
+      {/* Containers */}
+      {containersArray.map((c) => {
+        if (c.x == null || c.y == null) return null
+        const left = (c.x / yard.width_meters) * 100
+        const top = (c.y / yard.height_meters) * 100
+        const color = statusColors[c.status] || '#22c55e'
+        const isSelected = selectedContainerId === c.id
+
+        return (
+          <button
+            key={c.id}
+            onClick={() => selectContainer(c.id)}
+            className="absolute transition-all duration-300 hover:scale-125 group"
+            style={{ left: `${left}%`, top: `${top}%`, transform: 'translate(-50%, -50%)' }}
+            title={`${c.code} | ${c.status}`}
+          >
+            <div
+              className={`px-1.5 py-0.5 rounded text-[7px] font-mono font-bold whitespace-nowrap border ${isSelected ? 'ring-2 ring-white scale-125' : ''}`}
+              style={{
+                color,
+                borderColor: color + '60',
+                backgroundColor: color + '15',
+              }}
+            >
+              {c.code.split('-').pop()?.slice(0, 4)}
+            </div>
+            {/* Stack level indicator */}
+            {(c as any).stack_level > 0 && (
+              <div className="absolute -top-2 -right-2 w-3.5 h-3.5 rounded-full bg-amber-500 text-[7px] text-black font-bold flex items-center justify-center">
+                {(c as any).stack_level}
+              </div>
+            )}
+          </button>
+        )
+      })}
+
+      {/* Forklifts */}
+      {forkliftsArray.map((f) => {
+        if (f.x == null || f.y == null) return null
+        const left = (f.x / yard.width_meters) * 100
+        const top = (f.y / yard.height_meters) * 100
+        const color = forkliftStatusColors[f.status] || '#3b82f6'
+
+        return (
+          <div
+            key={f.id}
+            className="absolute transition-all duration-500"
+            style={{ left: `${left}%`, top: `${top}%`, transform: 'translate(-50%, -50%)' }}
+            title={`${f.code} | ${f.status}`}
+          >
+            <div className="relative">
+              <div
+                className="w-5 h-5 rounded-full border-2 shadow-lg animate-pulse"
+                style={{
+                  borderColor: color,
+                  backgroundColor: color + '40',
+                  boxShadow: `0 0 12px ${color}50`,
+                  animationDuration: f.status === 'working' ? '1s' : '3s',
+                }}
               />
-            )
-          })}
+              <div className="absolute -bottom-3.5 left-1/2 -translate-x-1/2 text-[7px] font-mono font-bold whitespace-nowrap" style={{ color }}>
+                {f.code}
+              </div>
+            </div>
+          </div>
+        )
+      })}
 
-          {/* Forklifts */}
-          {forkliftsArray.map((forklift) => {
-            if (forklift.x == null || forklift.y == null) return null
-            const { px, py } = metersToPixels(forklift.x, forklift.y)
-            return (
-              <ForkliftMarker
-                key={forklift.id}
-                code={forklift.code}
-                x={px}
-                y={py}
-                heading={forklift.heading || 0}
-                status={forklift.status}
-              />
-            )
-          })}
-        </Layer>
-      </Stage>
+      {/* Legend */}
+      <div className="absolute bottom-3 right-3 flex gap-3 text-[9px] text-gray-500 bg-[#060a0e]/80 backdrop-blur-sm rounded-lg px-3 py-1.5 border border-white/5">
+        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-500" /> Armazenado</span>
+        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-yellow-500" /> Trânsito</span>
+        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-500" /> Sem sinal</span>
+        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-blue-500" /> Empilhadeira</span>
+      </div>
     </div>
   )
 }
