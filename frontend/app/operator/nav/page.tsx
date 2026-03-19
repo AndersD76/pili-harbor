@@ -1,10 +1,8 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
-import { api, getToken } from '@/lib/api'
+import { useEffect, useState } from 'react'
+import { api } from '@/lib/api'
 import { useForkliftStore } from '@/lib/store/forklift'
-
-let wsClient: any = null
 import NavigationArrow from '@/components/operator/NavigationArrow'
 import TaskCard from '@/components/operator/TaskCard'
 
@@ -20,45 +18,28 @@ interface QueueTask {
   ai_instructions: string | null
 }
 
-interface ContainerInfo {
-  id: string
-  code: string
-  x_meters: number | null
-  y_meters: number | null
-}
-
 export default function OperatorNavPage() {
-  const { currentTask, myPosition, setCurrentTask, setQueue, setMyPosition } = useForkliftStore()
-  const [containerCode, setContainerCode] = useState<string>('')
-  const [targetPos, setTargetPos] = useState<{ x: number; y: number } | null>(null)
-  const [distance, setDistance] = useState<number | null>(null)
+  const { currentTask, setCurrentTask, setQueue, queue } = useForkliftStore()
   const [loading, setLoading] = useState(true)
   const [forkliftId, setForkliftId] = useState<string | null>(null)
+  const [containerCode, setContainerCode] = useState('')
 
-  // Calculate distance between two points
-  const calcDistance = useCallback((x1: number, y1: number, x2: number, y2: number) => {
-    return Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
-  }, [])
-
-  // Load forklift queue
   useEffect(() => {
     async function init() {
       try {
-        const me = await api.get<{ user: { id: string } }>('/api/v1/auth/me')
         const fId = localStorage.getItem('operator_forklift_id')
         if (!fId) {
-          // No forklift selected, go to operator home
           window.location.href = '/operator'
           return
         }
         setForkliftId(fId)
 
-        const queue = await api.get<QueueTask[]>(`/api/v1/forklifts/${fId}/queue`)
-        if (queue.length > 0) {
-          const active = queue.find((t) => t.status === 'in_progress') || queue[0]
+        const queueData = await api.get<QueueTask[]>(`/api/v1/forklifts/${fId}/queue`)
+        if (queueData.length > 0) {
+          const active = queueData.find((t) => t.status === 'in_progress') || queueData[0]
           setCurrentTask({
             id: active.id,
-            container_code: '', // Will be loaded
+            container_code: '',
             container_id: active.container_id,
             destination_x: active.destination_x || 0,
             destination_y: active.destination_y || 0,
@@ -68,7 +49,7 @@ export default function OperatorNavPage() {
             priority: active.priority,
           })
           setQueue(
-            queue
+            queueData
               .filter((t) => t.id !== active.id)
               .map((t) => ({
                 id: t.id,
@@ -82,74 +63,22 @@ export default function OperatorNavPage() {
                 priority: t.priority,
               }))
           )
-
-          // Load container info
-          const yardId = localStorage.getItem('current_yard_id')
-          if (yardId) {
-            try {
-              const containerInfo = await api.get<{ container: ContainerInfo }>(
-                `/api/v1/yards/${yardId}/containers/${active.container_id}`
-              )
-              setContainerCode(containerInfo.container.code)
-              if (containerInfo.container.x_meters != null && containerInfo.container.y_meters != null) {
-                setTargetPos({ x: containerInfo.container.x_meters, y: containerInfo.container.y_meters })
-              }
-            } catch {
-              // Container might not be accessible
-            }
-          }
+          setContainerCode(active.container_id.slice(0, 8))
         }
       } catch (err) {
         console.error('Init error:', err)
       }
       setLoading(false)
     }
-
     init()
-  }, [])
+  }, [setCurrentTask, setQueue])
 
-  // WebSocket for real-time position updates
-  useEffect(() => {
-    const yardId = localStorage.getItem('current_yard_id')
-    if (!yardId) return
+  function handleChangeForklift() {
+    localStorage.removeItem('operator_forklift_id')
+    window.location.href = '/operator'
+  }
 
-    try {
-      import('@/lib/websocket').then((mod) => {
-        wsClient = mod.wsClient
-        wsClient?.connect(yardId)
-      }).catch(() => {})
-    } catch {}
-
-    const unsub = wsClient?.on('position_update', (msg: any) => {
-      if (msg.entity_type === 'forklift' && msg.entity_id === forkliftId) {
-        setMyPosition({
-          x: msg.data.x,
-          y: msg.data.y,
-          heading: msg.data.heading || 0,
-        })
-      }
-    })
-
-    return () => {
-      unsub?.()
-      wsClient?.disconnect()
-    }
-  }, [forkliftId])
-
-  // Update distance
-  useEffect(() => {
-    if (myPosition && targetPos) {
-      const d = calcDistance(myPosition.x, myPosition.y, targetPos.x, targetPos.y)
-      setDistance(Math.round(d * 10) / 10)
-    }
-  }, [myPosition, targetPos, calcDistance])
-
-  // Calculate bearing to target
-  const bearing = myPosition && targetPos
-    ? (Math.atan2(targetPos.y - myPosition.y, targetPos.x - myPosition.x) * 180 / Math.PI - (myPosition.heading || 0))
-    : 0
-
-  async function handleArrived() {
+  async function handleComplete() {
     if (!currentTask) return
     const yardId = localStorage.getItem('current_yard_id')
     if (!yardId) return
@@ -157,14 +86,13 @@ export default function OperatorNavPage() {
     try {
       await api.put(`/api/v1/yards/${yardId}/tasks/${currentTask.id}/status`, {
         status: 'done',
-        notes: 'Operador confirmou chegada',
+        notes: 'Operador confirmou conclusão',
       })
 
-      // Load next task
       if (forkliftId) {
-        const queue = await api.get<QueueTask[]>(`/api/v1/forklifts/${forkliftId}/queue`)
-        if (queue.length > 0) {
-          const next = queue[0]
+        const newQueue = await api.get<QueueTask[]>(`/api/v1/forklifts/${forkliftId}/queue`)
+        if (newQueue.length > 0) {
+          const next = newQueue[0]
           setCurrentTask({
             id: next.id,
             container_code: '',
@@ -176,10 +104,15 @@ export default function OperatorNavPage() {
             type: next.type,
             priority: next.priority,
           })
+          setContainerCode(next.container_id.slice(0, 8))
+          setQueue(newQueue.slice(1).map((t) => ({
+            id: t.id, container_code: '', container_id: t.container_id,
+            destination_x: t.destination_x || 0, destination_y: t.destination_y || 0,
+            destination_label: t.destination_label, ai_instructions: t.ai_instructions,
+            type: t.type, priority: t.priority,
+          })))
         } else {
           setCurrentTask(null)
-          setTargetPos(null)
-          setDistance(null)
         }
       }
     } catch (err) {
@@ -190,16 +123,12 @@ export default function OperatorNavPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-harbor-bg flex items-center justify-center">
-        <p className="text-harbor-muted text-xl">Carregando...</p>
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-10 h-10 border-2 border-harbor-accent border-t-transparent rounded-full animate-spin" />
+          <p className="text-harbor-muted text-lg">Carregando...</p>
+        </div>
       </div>
     )
-  }
-
-  const { queue } = useForkliftStore()
-
-  function handleChangeForklift() {
-    localStorage.removeItem('operator_forklift_id')
-    window.location.href = '/operator'
   }
 
   if (!currentTask) {
@@ -216,8 +145,6 @@ export default function OperatorNavPage() {
     )
   }
 
-  const isClose = distance != null && distance < 3
-
   return (
     <div className="min-h-screen bg-harbor-bg flex flex-col items-center justify-between p-6 select-none">
       {/* Header */}
@@ -228,55 +155,36 @@ export default function OperatorNavPage() {
           </svg>
         </button>
         <h1 className="text-harbor-accent text-lg font-bold tracking-[0.2em]">EAZE</h1>
-        <div className="w-10" /> {/* spacer */}
+        <div className="w-10" />
       </div>
 
-      {/* Navigation Arrow */}
+      {/* Arrow */}
       <div className="flex-1 flex items-center justify-center">
-        <NavigationArrow angle={bearing} />
+        <NavigationArrow angle={0} />
       </div>
 
-      {/* Distance */}
-      <div className="text-center mb-4">
-        <div className="text-6xl font-bold font-mono text-harbor-text">
-          {distance != null ? `${distance}m` : '--'}
-        </div>
-        <div className="text-harbor-muted text-lg mt-2">distância</div>
-      </div>
+      {/* Task info */}
+      <div className="w-full space-y-3">
+        <TaskCard
+          containerCode={containerCode || currentTask.container_id.slice(0, 8)}
+          destinationLabel={currentTask.destination_label}
+          instructions={currentTask.ai_instructions}
+        />
 
-      {/* Container code */}
-      <TaskCard
-        containerCode={containerCode || currentTask.container_id.slice(0, 8)}
-        destinationLabel={currentTask.destination_label}
-        instructions={currentTask.ai_instructions}
-      />
-
-      {/* Queue info */}
-      {queue.length > 0 && (
-        <div className="w-full mt-3 px-4 py-2.5 bg-harbor-surface border border-harbor-border rounded-lg text-center">
-          <span className="text-xs text-harbor-muted">
-            +{queue.length} tarefa{queue.length > 1 ? 's' : ''} na fila
-          </span>
-        </div>
-      )}
-
-      {/* Action buttons */}
-      <div className="w-full mt-4 space-y-3">
-        {isClose ? (
-          <button
-            onClick={handleArrived}
-            className="w-full py-5 bg-harbor-green text-harbor-bg text-2xl font-bold rounded-xl active:bg-green-500 transition-colors"
-          >
-            Cheguei
-          </button>
-        ) : (
-          <button
-            onClick={handleArrived}
-            className="w-full py-4 bg-harbor-surface border border-harbor-border text-harbor-text text-lg font-semibold rounded-xl active:bg-harbor-bg transition-colors"
-          >
-            Concluir Tarefa
-          </button>
+        {queue.length > 0 && (
+          <div className="w-full px-4 py-2.5 bg-harbor-surface border border-harbor-border rounded-lg text-center">
+            <span className="text-sm text-harbor-muted">
+              +{queue.length} tarefa{queue.length > 1 ? 's' : ''} na fila
+            </span>
+          </div>
         )}
+
+        <button
+          onClick={handleComplete}
+          className="w-full py-5 bg-harbor-green text-harbor-bg text-2xl font-bold rounded-xl active:bg-green-500 transition-colors"
+        >
+          Concluir Tarefa
+        </button>
       </div>
     </div>
   )
