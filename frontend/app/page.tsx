@@ -59,17 +59,7 @@ function useFadeIn() {
   return ref
 }
 
-const IMAGES = {
-  hero: 'https://images.unsplash.com/photo-1611273426858-450d8e3c9fce?w=1920&q=80',
-  port1: 'https://images.unsplash.com/photo-1577993439613-4e3e4f6fe57c?w=800&q=80',
-  port2: 'https://images.unsplash.com/photo-1605745341112-85968b19335b?w=800&q=80',
-  port3: 'https://images.unsplash.com/photo-1567789884554-0b844b597180?w=800&q=80',
-  aerial: 'https://images.unsplash.com/photo-1494412574643-ff11b0a5eb19?w=1920&q=80',
-  forklift: 'https://images.unsplash.com/photo-1504711331083-9c895941bf81?w=800&q=80',
-  containers: 'https://images.unsplash.com/photo-1605745341075-1b7460b99df8?w=1920&q=80',
-  ship: 'https://images.unsplash.com/photo-1513828583688-c52646db42da?w=1920&q=80',
-  crane: 'https://images.unsplash.com/photo-1605745341112-85968b19335b?w=800&q=80',
-}
+/* No external images - pure CSS gradients and SVG */
 
 const CHECK = (
   <svg className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
@@ -138,12 +128,11 @@ export default function LandingPage() {
 
       {/* ══════ HERO ══════ */}
       <section className="relative min-h-screen flex items-center overflow-hidden">
-        <div
-          className="absolute inset-0 bg-cover bg-center"
-          style={{ backgroundImage: `url(${IMAGES.hero})`, transform: `translateY(${scrollY * 0.3}px) scale(1.1)` }}
-        />
-        <div className="absolute inset-0 bg-gradient-to-b from-[#05080a]/80 via-[#05080a]/60 to-[#05080a]" />
-        <div className="absolute inset-0 bg-gradient-to-r from-[#05080a]/90 to-transparent" />
+        {/* Gradient background with grid pattern */}
+        <div className="absolute inset-0 bg-gradient-to-br from-[#0a0e14] via-[#05080a] to-[#0d0508]" />
+        <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)', backgroundSize: '60px 60px' }} />
+        <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-red-500/[0.03] rounded-full blur-[150px]" />
+        <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-blue-500/[0.03] rounded-full blur-[150px]" />
 
         <div className="relative z-10 max-w-7xl mx-auto px-6 pt-32 pb-20 grid lg:grid-cols-2 gap-16 items-center">
           <div>
@@ -263,19 +252,14 @@ export default function LandingPage() {
           </div>
           <div className="grid md:grid-cols-3 gap-6">
             {[
-              { img: IMAGES.port1, title: 'Busca manual consome o turno', desc: 'Operadores perdem até 40% do tempo procurando containers. Com empilhamento de 3-5 níveis, achar e acessar o container certo vira um quebra-cabeça.' },
-              { img: IMAGES.port2, title: 'Zero visibilidade de pilha', desc: 'Ninguém sabe quais containers estão embaixo de outros. Remanejamentos desnecessários desperdiçam horas e combustível.' },
-              { img: IMAGES.port3, title: 'Embarques atrasados', desc: 'Sem sequência otimizada, a empilhadeira faz 3x mais viagens. Manifestos atrasam, multas contratuais se acumulam.' },
+              { icon: (<svg className="w-12 h-12 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10 10l4 4" /></svg>), title: 'Busca manual consome o turno', desc: 'Operadores perdem até 40% do tempo procurando containers. Com empilhamento de 3-5 níveis, achar e acessar o container certo vira um quebra-cabeça.' },
+              { icon: (<svg className="w-12 h-12 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 11v4" /></svg>), title: 'Zero visibilidade de pilha', desc: 'Ninguém sabe quais containers estão embaixo de outros. Remanejamentos desnecessários desperdiçam horas e combustível.' },
+              { icon: (<svg className="w-12 h-12 text-orange-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>), title: 'Embarques atrasados', desc: 'Sem sequência otimizada, a empilhadeira faz 3x mais viagens. Manifestos atrasam, multas contratuais se acumulam.' },
             ].map((card, i) => (
-              <div key={i} className="group relative overflow-hidden rounded-2xl border border-white/5 hover:border-red-500/30 transition-all duration-500">
-                <div className="h-48 overflow-hidden">
-                  <img src={card.img} alt={card.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
-                  <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#05080a]/60 to-[#05080a]" />
-                </div>
-                <div className="p-6 relative">
-                  <h3 className="text-lg font-bold mb-2">{card.title}</h3>
-                  <p className="text-sm text-gray-500 leading-relaxed">{card.desc}</p>
-                </div>
+              <div key={i} className="group rounded-2xl border border-white/5 hover:border-red-500/30 transition-all duration-500 bg-white/[0.02] hover:bg-white/[0.04] p-8">
+                <div className="mb-5">{card.icon}</div>
+                <h3 className="text-lg font-bold mb-3">{card.title}</h3>
+                <p className="text-sm text-gray-500 leading-relaxed">{card.desc}</p>
               </div>
             ))}
           </div>
@@ -284,7 +268,7 @@ export default function LandingPage() {
 
       {/* ══════ MÓDULOS ══════ */}
       <section id="modulos" ref={f2} className="py-24 relative">
-        <div className="absolute inset-0 bg-cover bg-center bg-fixed opacity-10" style={{ backgroundImage: `url(${IMAGES.aerial})` }} />
+        <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'radial-gradient(circle at 20% 50%, rgba(239,68,68,0.15), transparent 50%), radial-gradient(circle at 80% 50%, rgba(59,130,246,0.1), transparent 50%)' }} />
         <div className="relative max-w-7xl mx-auto px-6">
           <div className="text-center mb-16">
             <span className="text-xs text-red-500 uppercase tracking-[0.3em] font-mono">Módulos</span>
@@ -451,7 +435,7 @@ export default function LandingPage() {
 
       {/* ══════ EAZE - APP DO OPERADOR ══════ */}
       <section id="eaze" ref={f7} className="py-24 relative overflow-hidden">
-        <div className="absolute inset-0 bg-cover bg-center opacity-15" style={{ backgroundImage: `url(${IMAGES.forklift})` }} />
+        <div className="absolute inset-0 opacity-[0.05]" style={{ backgroundImage: 'radial-gradient(circle at 70% 30%, rgba(239,68,68,0.2), transparent 50%)' }} />
         <div className="absolute inset-0 bg-gradient-to-r from-[#05080a] via-[#05080a]/90 to-[#05080a]/70" />
         <div className="relative max-w-7xl mx-auto px-6 grid lg:grid-cols-2 gap-16 items-center">
           <div>
@@ -545,7 +529,7 @@ export default function LandingPage() {
 
       {/* ══════ CONTATO / PRICING ══════ */}
       <section id="contato" ref={f9} className="py-32 relative overflow-hidden">
-        <div className="absolute inset-0 bg-cover bg-center opacity-20" style={{ backgroundImage: `url(${IMAGES.ship})` }} />
+        <div className="absolute inset-0 opacity-[0.05]" style={{ backgroundImage: 'radial-gradient(circle at 50% 50%, rgba(239,68,68,0.15), transparent 60%)' }} />
         <div className="absolute inset-0 bg-gradient-to-t from-[#05080a] via-[#05080a]/80 to-[#05080a]" />
         <div className="relative text-center max-w-3xl mx-auto px-6">
           <span className="text-xs text-red-500 uppercase tracking-[0.3em] font-mono">Contato</span>
