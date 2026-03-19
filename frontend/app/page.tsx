@@ -61,11 +61,11 @@ function useFadeIn() {
 
 const IMAGES = {
   hero: 'https://images.unsplash.com/photo-1494412574643-ff11b0a5eb19?w=1920&q=80',
-  port1: 'https://images.unsplash.com/photo-1578575437130-527eed3abbec?w=800&q=80',
-  port2: 'https://images.unsplash.com/photo-1611273426858-450d8e3c9fce?w=800&q=80',
-  port3: 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=800&q=80',
+  port1: 'https://images.unsplash.com/photo-1494412574643-ff11b0a5eb19?w=800&q=80',
+  port2: 'https://images.unsplash.com/photo-1590846406792-0adc7f938f1d?w=800&q=80',
+  port3: 'https://images.unsplash.com/photo-1559136555-9303baea8ebd?w=800&q=80',
   aerial: 'https://images.unsplash.com/photo-1559136555-9303baea8ebd?w=1920&q=80',
-  forklift: 'https://images.unsplash.com/photo-1553413077-190dd305871c?w=800&q=80',
+  forklift: 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=800&q=80',
   containers: 'https://images.unsplash.com/photo-1605745341075-1b7460b99df8?w=1920&q=80',
   ship: 'https://images.unsplash.com/photo-1513828583688-c52646db42da?w=1920&q=80',
   crane: 'https://images.unsplash.com/photo-1605745341112-85968b19335b?w=800&q=80',
