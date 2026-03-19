@@ -266,7 +266,7 @@ export default function ControlCenter() {
                 <div key={task.id} className="p-2.5 bg-harbor-bg rounded-lg border border-harbor-border text-xs">
                   <div className="flex justify-between items-center">
                     <span className="text-harbor-text font-mono">{task.container_id.slice(0, 8)}</span>
-                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
                       task.status === 'in_progress' ? 'bg-purple-400/10 text-purple-400 border border-purple-400/20' :
                       task.status === 'assigned' ? 'bg-blue-400/10 text-blue-400 border border-blue-400/20' :
                       'bg-harbor-border text-harbor-muted'
@@ -288,7 +288,7 @@ export default function ControlCenter() {
             <div className="space-y-2">
               {alerts.slice(0, 10).map((alert) => (
                 <div key={alert.id} className="p-2.5 bg-red-900/10 border border-red-900/30 rounded-lg text-xs text-red-400">
-                  <p className="font-mono text-[10px] text-red-600 mb-1">{alert.code}</p>
+                  <p className="font-mono text-xs text-red-600 mb-1">{alert.code}</p>
                   <p>{alert.message}</p>
                 </div>
               ))}

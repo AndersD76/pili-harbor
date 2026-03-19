@@ -272,7 +272,7 @@ export default function TasksPage() {
                       <span className="font-mono text-xs text-harbor-text bg-harbor-bg px-2 py-0.5 rounded">
                         {task.container_id.slice(0, 8)}
                       </span>
-                      <span className={`text-[10px] font-bold ${priorityColors[task.priority] || 'text-harbor-muted'}`}>
+                      <span className={`text-xs font-bold ${priorityColors[task.priority] || 'text-harbor-muted'}`}>
                         P{task.priority}
                       </span>
                     </div>
@@ -295,7 +295,7 @@ export default function TasksPage() {
 
                     {/* Duration */}
                     {task.estimated_duration_seconds && (
-                      <div className="flex items-center gap-1 text-[10px] text-harbor-muted mt-2">
+                      <div className="flex items-center gap-1 text-xs text-harbor-muted mt-2">
                         <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
@@ -305,7 +305,7 @@ export default function TasksPage() {
 
                     {/* Forklift badge */}
                     {task.forklift_id && (
-                      <div className="mt-2 text-[10px] text-blue-400 bg-blue-400/10 px-2 py-0.5 rounded w-fit">
+                      <div className="mt-2 text-xs text-blue-400 bg-blue-400/10 px-2 py-0.5 rounded w-fit">
                         {task.forklift_id.slice(0, 6)}
                       </div>
                     )}
@@ -315,7 +315,7 @@ export default function TasksPage() {
                       <div className="mt-3 pt-2 border-t border-harbor-border flex gap-1">
                         {(nextStatus[task.status] || []).map((action) => (
                           <button key={action.status} onClick={() => changeStatus(task.id, action.status)}
-                            className={`flex-1 px-2 py-1 text-[10px] font-medium rounded border ${action.color} hover:opacity-80 transition-opacity`}>
+                            className={`flex-1 px-2 py-1 text-xs font-medium rounded border ${action.color} hover:opacity-80 transition-opacity`}>
                             {action.label}
                           </button>
                         ))}

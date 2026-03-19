@@ -70,7 +70,7 @@ export default function YardCanvas() {
         <div className="text-xs font-mono text-gray-500">
           {yard.name} &mdash; {yard.width_meters}m &times; {yard.height_meters}m
         </div>
-        <div className="flex gap-4 text-[10px] text-gray-500">
+        <div className="flex gap-4 text-xs text-gray-500">
           <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-emerald-500/30 border border-emerald-500/50" /> Armazenado</span>
           <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-amber-500/30 border border-amber-500/50" /> Em trânsito</span>
           <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-red-500/30 border border-red-500/50" /> Sem sinal</span>
@@ -97,7 +97,7 @@ export default function YardCanvas() {
               {blockStacks.map((stack) => (
                 <div key={`${stack.block}-${stack.row}-${stack.col}`} className="bg-[#060a0e] rounded-lg p-2.5">
                   {/* Stack position label */}
-                  <div className="text-[9px] font-mono text-gray-600 mb-1.5">
+                  <div className="text-xs font-mono text-gray-600 mb-1.5">
                     Fila {stack.row} &middot; Col {stack.col} &middot; {stack.containers.length} nível{stack.containers.length > 1 ? 'is' : ''}
                   </div>
 
@@ -117,17 +117,17 @@ export default function YardCanvas() {
                           className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded border transition-all text-left ${colors.bg} ${colors.border} ${isSelected ? 'ring-1 ring-white' : ''} ${isBlocked ? 'opacity-60' : ''}`}
                         >
                           <div className="flex items-center gap-2">
-                            <span className={`text-[10px] font-mono font-bold ${colors.text}`}>
+                            <span className={`text-xs font-mono font-bold ${colors.text}`}>
                               {c.code}
                             </span>
                           </div>
                           <div className="flex items-center gap-1.5">
                             {isBlocked && (
-                              <span className="text-[8px] text-amber-400 bg-amber-400/10 px-1 py-0.5 rounded">
+                              <span className="text-xs text-amber-400 bg-amber-400/10 px-1 py-0.5 rounded">
                                 BLOQ
                               </span>
                             )}
-                            <span className="text-[9px] font-mono text-gray-500">
+                            <span className="text-xs font-mono text-gray-500">
                               N{c.stack_level}
                             </span>
                           </div>
@@ -159,7 +159,7 @@ export default function YardCanvas() {
                 <button
                   key={c.id}
                   onClick={() => selectContainer(c.id)}
-                  className={`px-3 py-1.5 rounded border text-[10px] font-mono font-bold transition-all ${colors.bg} ${colors.border} ${colors.text} ${isSelected ? 'ring-1 ring-white' : ''}`}
+                  className={`px-3 py-1.5 rounded border text-xs font-mono font-bold transition-all ${colors.bg} ${colors.border} ${colors.text} ${isSelected ? 'ring-1 ring-white' : ''}`}
                 >
                   {c.code}
                 </button>
@@ -189,7 +189,7 @@ export default function YardCanvas() {
                 </div>
                 <div>
                   <div className="font-mono font-bold text-sm">{f.code}</div>
-                  <div className="text-[10px] opacity-70">
+                  <div className="text-xs opacity-70">
                     {f.status === 'idle' ? 'Disponível' : f.status === 'working' ? 'Trabalhando' : f.status === 'offline' ? 'Offline' : 'Manutenção'}
                     {f.x != null && <span className="ml-1">({f.x?.toFixed(0)}m, {f.y?.toFixed(0)}m)</span>}
                   </div>

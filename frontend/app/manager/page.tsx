@@ -138,7 +138,7 @@ export default function ManagerPage() {
                 <div className="w-full h-2 bg-harbor-border rounded-full overflow-hidden">
                   <div className="h-full bg-harbor-green rounded-full transition-all" style={{ width: `${pct}%` }} />
                 </div>
-                <div className="flex justify-between mt-2 text-[10px] text-harbor-muted">
+                <div className="flex justify-between mt-2 text-xs text-harbor-muted">
                   <span>{m.done}/{m.total} tarefas</span>
                   {m.deadline_at && <span>Prazo: {new Date(m.deadline_at).toLocaleTimeString('pt-BR')}</span>}
                 </div>
@@ -159,7 +159,7 @@ export default function ManagerPage() {
               <div key={alert.id} className="p-3 bg-red-900/10 border border-red-900/30 rounded-lg">
                 <div className="flex justify-between items-start">
                   <span className="text-xs font-mono text-red-500">{alert.code}</span>
-                  <span className="text-[10px] text-harbor-muted">{new Date(alert.timestamp).toLocaleTimeString('pt-BR')}</span>
+                  <span className="text-xs text-harbor-muted">{new Date(alert.timestamp).toLocaleTimeString('pt-BR')}</span>
                 </div>
                 <p className="text-sm text-red-400 mt-1">{alert.message}</p>
               </div>

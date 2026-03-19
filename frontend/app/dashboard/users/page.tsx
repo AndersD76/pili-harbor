@@ -166,7 +166,7 @@ export default function UsersPage() {
                     </td>
                     <td className="px-4 py-3 text-harbor-muted">{u.email}</td>
                     <td className="px-4 py-3">
-                      <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-medium ${role.color} ${role.bg}`}>
+                      <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${role.color} ${role.bg}`}>
                         {role.label}
                       </span>
                     </td>

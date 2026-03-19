@@ -209,7 +209,7 @@ function LimitCard({ label, value, max }: { label: string; value: number | strin
       <div className="text-lg font-bold font-mono text-harbor-text">
         {value}<span className="text-harbor-muted text-xs">/{max}</span>
       </div>
-      <div className="text-[10px] text-harbor-muted mt-1">{label}</div>
+      <div className="text-xs text-harbor-muted mt-1">{label}</div>
     </div>
   )
 }

@@ -195,7 +195,7 @@ export default function LandingPage() {
                   ].map((kpi, i) => (
                     <div key={i} className="bg-white/5 rounded-lg p-3 text-center">
                       <div className={`text-lg font-bold font-mono ${kpi.color}`}>{kpi.value}</div>
-                      <div className="text-[10px] text-gray-500">{kpi.label}</div>
+                      <div className="text-xs text-gray-500">{kpi.label}</div>
                     </div>
                   ))}
                 </div>
@@ -212,7 +212,7 @@ export default function LandingPage() {
                     { x: 85, y: 30, color: '#22c55e', label: '105' },
                   ].map((c, i) => (
                     <div key={i} className="absolute animate-pulse" style={{ left: `${c.x}%`, top: `${c.y}%`, animationDelay: `${i * 0.4}s`, animationDuration: c.color === '#eab308' ? '1s' : '3s' }}>
-                      <div className="w-8 h-4 rounded-sm border text-[6px] flex items-center justify-center font-mono" style={{ borderColor: c.color, color: c.color, backgroundColor: c.color + '15' }}>{c.label}</div>
+                      <div className="w-8 h-4 rounded-sm border text-xs flex items-center justify-center font-mono" style={{ borderColor: c.color, color: c.color, backgroundColor: c.color + '15' }}>{c.label}</div>
                     </div>
                   ))}
                   <div className="absolute animate-bounce" style={{ left: '42%', top: '42%', animationDuration: '2s' }}>
@@ -294,15 +294,15 @@ export default function LandingPage() {
             </div>
             <div className="rounded-2xl border border-white/10 bg-[#0a0f14] p-6">
               <div className="grid grid-cols-3 gap-3 mb-4 text-center">
-                <div className="bg-white/5 rounded-lg p-2"><div className="text-green-400 font-mono font-bold">247</div><div className="text-[9px] text-gray-600">Containers</div></div>
-                <div className="bg-white/5 rounded-lg p-2"><div className="text-blue-400 font-mono font-bold">6</div><div className="text-[9px] text-gray-600">Empilhadeiras</div></div>
-                <div className="bg-white/5 rounded-lg p-2"><div className="text-yellow-400 font-mono font-bold">12</div><div className="text-[9px] text-gray-600">Tarefas</div></div>
+                <div className="bg-white/5 rounded-lg p-2"><div className="text-green-400 font-mono font-bold">247</div><div className="text-xs text-gray-600">Containers</div></div>
+                <div className="bg-white/5 rounded-lg p-2"><div className="text-blue-400 font-mono font-bold">6</div><div className="text-xs text-gray-600">Empilhadeiras</div></div>
+                <div className="bg-white/5 rounded-lg p-2"><div className="text-yellow-400 font-mono font-bold">12</div><div className="text-xs text-gray-600">Tarefas</div></div>
               </div>
               <div className="bg-[#060a0e] rounded-lg h-48 border border-white/5 relative overflow-hidden">
                 <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.1) 1px, transparent 1px)', backgroundSize: '16px 16px' }} />
-                <div className="absolute left-[20%] top-[30%] text-[8px] font-mono text-green-400 bg-green-400/10 border border-green-400/30 px-1.5 py-0.5 rounded">A-3/2 N0</div>
-                <div className="absolute left-[20%] top-[20%] text-[8px] font-mono text-yellow-400 bg-yellow-400/10 border border-yellow-400/30 px-1.5 py-0.5 rounded">A-3/2 N1</div>
-                <div className="absolute left-[50%] top-[50%] text-[8px] font-mono text-green-400 bg-green-400/10 border border-green-400/30 px-1.5 py-0.5 rounded">B-1/4 N0</div>
+                <div className="absolute left-[20%] top-[30%] text-xs font-mono text-green-400 bg-green-400/10 border border-green-400/30 px-1.5 py-0.5 rounded">A-3/2 N0</div>
+                <div className="absolute left-[20%] top-[20%] text-xs font-mono text-yellow-400 bg-yellow-400/10 border border-yellow-400/30 px-1.5 py-0.5 rounded">A-3/2 N1</div>
+                <div className="absolute left-[50%] top-[50%] text-xs font-mono text-green-400 bg-green-400/10 border border-green-400/30 px-1.5 py-0.5 rounded">B-1/4 N0</div>
                 <div className="absolute left-[70%] top-[40%] w-3 h-3 rounded-full bg-blue-500 border border-blue-300 animate-bounce" style={{ animationDuration: '2s' }} />
               </div>
             </div>
@@ -322,11 +322,11 @@ export default function LandingPage() {
                   <div key={i} className="flex items-center justify-between bg-white/5 rounded-lg px-4 py-2.5">
                     <span className="font-mono text-sm text-white">{c.code}</span>
                     <span className="font-mono text-xs text-gray-500">{c.block} {c.level}</span>
-                    <span className={`text-[10px] px-2 py-0.5 rounded-full bg-${c.color}-400/10 text-${c.color}-400`}>{c.status}</span>
+                    <span className={`text-xs px-2 py-0.5 rounded-full bg-${c.color}-400/10 text-${c.color}-400`}>{c.status}</span>
                   </div>
                 ))}
               </div>
-              <div className="mt-3 text-[10px] text-amber-400 bg-amber-400/10 rounded-lg px-3 py-2 border border-amber-400/20">
+              <div className="mt-3 text-xs text-amber-400 bg-amber-400/10 rounded-lg px-3 py-2 border border-amber-400/20">
                 CMAU-3125 bloqueado por 2 containers acima. IA calculando remanejamento.
               </div>
             </div>
@@ -371,11 +371,11 @@ export default function LandingPage() {
                   { label: 'Concluída', color: 'green', count: 8 },
                 ].map((col, i) => (
                   <div key={i}>
-                    <div className={`text-[10px] font-semibold text-${col.color}-400 bg-${col.color}-400/10 rounded px-2 py-1 mb-2 text-center`}>{col.label} ({col.count})</div>
+                    <div className={`text-xs font-semibold text-${col.color}-400 bg-${col.color}-400/10 rounded px-2 py-1 mb-2 text-center`}>{col.label} ({col.count})</div>
                     {Array.from({ length: Math.min(col.count, 3) }).map((_, j) => (
                       <div key={j} className="bg-white/5 rounded p-2 mb-1.5 border border-white/5">
-                        <div className="text-[8px] font-mono text-white">CNTR-{String(Math.floor(Math.random() * 900) + 100)}</div>
-                        <div className="text-[7px] text-gray-600 mt-0.5">Relocar | P{Math.floor(Math.random() * 5) + 5}</div>
+                        <div className="text-xs font-mono text-white">CNTR-{String(Math.floor(Math.random() * 900) + 100)}</div>
+                        <div className="text-xs text-gray-600 mt-0.5">Relocar | P{Math.floor(Math.random() * 5) + 5}</div>
                       </div>
                     ))}
                   </div>
@@ -399,7 +399,7 @@ export default function LandingPage() {
                 <div className="text-gray-500">Containers bloqueados: <span className="text-amber-400">7</span></div>
                 <div className="text-gray-500">Remanejamentos necessários: <span className="text-amber-400">11</span></div>
                 <div className="mt-3 text-green-400">Sequência ótima calculada:</div>
-                <div className="mt-2 pl-3 border-l-2 border-green-500/30 space-y-1 text-[11px]">
+                <div className="mt-2 pl-3 border-l-2 border-green-500/30 space-y-1 text-xs">
                   <div><span className="text-amber-400">1. DESEMPILHAR</span> TCLU-891 → Bloco C temp</div>
                   <div><span className="text-amber-400">2. DESEMPILHAR</span> MSCU-447 → Bloco C temp</div>
                   <div><span className="text-blue-400">3. CARREGAR</span> CMAU-312 → Doca 2</div>
@@ -476,9 +476,9 @@ export default function LandingPage() {
               <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-6 bg-[#0a0f14] rounded-b-2xl border-b border-x border-gray-700" />
               <div className="h-full flex flex-col items-center justify-center p-6">
                 <div className="text-lg text-red-500 font-bold tracking-[0.3em] mb-1">EAZE</div>
-                <div className="text-[9px] text-gray-600 font-mono mb-6">PILI HARBOR</div>
+                <div className="text-xs text-gray-600 font-mono mb-6">PILI HARBOR</div>
                 <div className="text-xs text-gray-500 mb-1 font-mono">CMAU-3125</div>
-                <div className="text-[10px] text-gray-600 mb-4">Bloco A, Fila 3 → Doca 2</div>
+                <div className="text-xs text-gray-600 mb-4">Bloco A, Fila 3 → Doca 2</div>
                 <div className="relative w-32 h-32 my-4">
                   <svg viewBox="0 0 100 100" className="w-full h-full animate-pulse" style={{ animationDuration: '2s' }}>
                     <defs><linearGradient id="ag" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stopColor="#ef4444" /><stop offset="100%" stopColor="#dc2626" /></linearGradient></defs>
@@ -487,7 +487,7 @@ export default function LandingPage() {
                 </div>
                 <div className="text-5xl font-black text-white font-mono">23<span className="text-lg text-gray-500">m</span></div>
                 <div className="text-xs text-gray-600 mt-1 font-mono">distância</div>
-                <div className="mt-4 w-full py-2 bg-white/5 border border-white/10 rounded-lg text-center text-[10px] text-gray-500">
+                <div className="mt-4 w-full py-2 bg-white/5 border border-white/10 rounded-lg text-center text-xs text-gray-500">
                   +3 tarefas na fila
                 </div>
                 <div className="mt-3 w-full py-3 bg-green-600/20 border border-green-500/30 rounded-xl text-center text-green-400 text-sm font-bold">

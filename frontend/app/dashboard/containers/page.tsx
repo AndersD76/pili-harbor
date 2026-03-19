@@ -189,25 +189,25 @@ export default function ContainersPage() {
                 <div className="text-xs text-harbor-muted uppercase tracking-wider mb-3">Posição na Pilha</div>
                 <div className="grid grid-cols-4 gap-3">
                   <div>
-                    <label className="block text-[10px] text-harbor-muted mb-1">Bloco</label>
+                    <label className="block text-xs text-harbor-muted mb-1">Bloco</label>
                     <input type="text" value={form.block_label} onChange={(e) => setForm({ ...form, block_label: e.target.value })}
                       className="w-full px-3 py-2 bg-harbor-bg border border-harbor-border rounded-lg text-harbor-text font-mono text-sm focus:border-harbor-accent focus:outline-none"
                       placeholder="A" maxLength={10} />
                   </div>
                   <div>
-                    <label className="block text-[10px] text-harbor-muted mb-1">Fila</label>
+                    <label className="block text-xs text-harbor-muted mb-1">Fila</label>
                     <input type="number" value={form.row} onChange={(e) => setForm({ ...form, row: e.target.value })}
                       className="w-full px-3 py-2 bg-harbor-bg border border-harbor-border rounded-lg text-harbor-text font-mono text-sm focus:border-harbor-accent focus:outline-none"
                       placeholder="1" min={0} />
                   </div>
                   <div>
-                    <label className="block text-[10px] text-harbor-muted mb-1">Coluna</label>
+                    <label className="block text-xs text-harbor-muted mb-1">Coluna</label>
                     <input type="number" value={form.col} onChange={(e) => setForm({ ...form, col: e.target.value })}
                       className="w-full px-3 py-2 bg-harbor-bg border border-harbor-border rounded-lg text-harbor-text font-mono text-sm focus:border-harbor-accent focus:outline-none"
                       placeholder="1" min={0} />
                   </div>
                   <div>
-                    <label className="block text-[10px] text-harbor-muted mb-1">Nível</label>
+                    <label className="block text-xs text-harbor-muted mb-1">Nível</label>
                     <input type="number" value={form.stack_level} onChange={(e) => setForm({ ...form, stack_level: e.target.value })}
                       className="w-full px-3 py-2 bg-harbor-bg border border-harbor-border rounded-lg text-harbor-text font-mono text-sm focus:border-harbor-accent focus:outline-none"
                       placeholder="0" min={0} max={5} />
@@ -297,7 +297,7 @@ export default function ContainersPage() {
                         {c.description && <div className="text-xs text-harbor-muted mt-0.5">{c.description}</div>}
                       </td>
                       <td className="px-4 py-3">
-                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium ${status.color} ${status.bg} border ${status.border}`}>
+                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${status.color} ${status.bg} border ${status.border}`}>
                           <span className={`w-1.5 h-1.5 rounded-full ${status.dot}`} />
                           {status.label}
                         </span>
@@ -323,7 +323,7 @@ export default function ContainersPage() {
                           <select
                             value={c.status}
                             onChange={(e) => handleStatusChange(c.id, e.target.value)}
-                            className="text-[10px] bg-harbor-bg border border-harbor-border rounded px-1.5 py-1 text-harbor-text focus:outline-none"
+                            className="text-xs bg-harbor-bg border border-harbor-border rounded px-1.5 py-1 text-harbor-text focus:outline-none"
                           >
                             <option value="stored">Armazenado</option>
                             <option value="in_transit">Em Trânsito</option>

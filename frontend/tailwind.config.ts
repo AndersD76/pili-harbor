@@ -19,7 +19,13 @@ const config: Config = {
         },
       },
       fontFamily: {
+        sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
         mono: ['JetBrains Mono', 'Fira Code', 'monospace'],
+      },
+      fontSize: {
+        'xs': ['0.8125rem', { lineHeight: '1.25rem' }],   // 13px instead of 12px
+        'sm': ['0.875rem', { lineHeight: '1.375rem' }],   // 14px
+        'base': ['1rem', { lineHeight: '1.625rem' }],     // 16px
       },
     },
   },
