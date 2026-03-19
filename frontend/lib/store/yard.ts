@@ -8,6 +8,10 @@ export interface ContainerState {
   status: string
   confidence: number | null
   weight_kg: number | null
+  stack_level: number
+  block_label: string | null
+  row: number | null
+  col: number | null
 }
 
 export interface ForkliftState {

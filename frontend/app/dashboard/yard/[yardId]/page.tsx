@@ -29,6 +29,10 @@ interface YardStateResponse {
     status: string
     position_confidence: number | null
     weight_kg: number | null
+    stack_level: number
+    block_label: string | null
+    row: number | null
+    col: number | null
   }>
   forklifts: Array<{
     id: string
@@ -84,6 +88,10 @@ export default function ControlCenter() {
             status: c.status,
             confidence: c.position_confidence,
             weight_kg: c.weight_kg,
+            stack_level: c.stack_level ?? 0,
+            block_label: c.block_label ?? null,
+            row: c.row ?? null,
+            col: c.col ?? null,
           }))
         )
         setForklifts(
