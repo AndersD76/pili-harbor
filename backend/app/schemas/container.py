@@ -10,6 +10,10 @@ class ContainerCreate(BaseModel):
     weight_kg: float | None = None
     x_meters: float | None = None
     y_meters: float | None = None
+    stack_level: int = 0
+    block_label: str | None = None
+    row: int | None = None
+    col: int | None = None
 
 
 class ContainerUpdate(BaseModel):
@@ -19,6 +23,10 @@ class ContainerUpdate(BaseModel):
     status: str | None = None
     x_meters: float | None = None
     y_meters: float | None = None
+    stack_level: int | None = None
+    block_label: str | None = None
+    row: int | None = None
+    col: int | None = None
 
 
 class ContainerResponse(BaseModel):
@@ -31,6 +39,11 @@ class ContainerResponse(BaseModel):
     status: str
     x_meters: float | None
     y_meters: float | None
+    stack_level: int
+    block_label: str | None
+    row: int | None
+    col: int | None
+    max_stack: int
     position_confidence: float | None
     last_seen_at: datetime | None
     created_at: datetime

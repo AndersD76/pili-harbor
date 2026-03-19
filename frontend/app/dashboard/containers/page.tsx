@@ -12,6 +12,11 @@ interface Container {
   status: string
   x_meters: number | null
   y_meters: number | null
+  stack_level: number
+  block_label: string | null
+  row: number | null
+  col: number | null
+  max_stack: number
   position_confidence: number | null
   last_seen_at: string | null
   created_at: string
@@ -31,7 +36,7 @@ export default function ContainersPage() {
   const [showCreate, setShowCreate] = useState(false)
   const [creating, setCreating] = useState(false)
   const [createError, setCreateError] = useState<string | null>(null)
-  const [form, setForm] = useState({ code: '', description: '', weight_kg: '', x_meters: '', y_meters: '' })
+  const [form, setForm] = useState({ code: '', description: '', weight_kg: '', x_meters: '', y_meters: '', block_label: '', row: '', col: '', stack_level: '0' })
   const [search, setSearch] = useState('')
   const [yardId, setYardId] = useState<string | null>(null)
 
@@ -60,9 +65,13 @@ export default function ContainersPage() {
         weight_kg: form.weight_kg ? Number(form.weight_kg) : null,
         x_meters: form.x_meters ? Number(form.x_meters) : null,
         y_meters: form.y_meters ? Number(form.y_meters) : null,
+        block_label: form.block_label || null,
+        row: form.row ? Number(form.row) : null,
+        col: form.col ? Number(form.col) : null,
+        stack_level: Number(form.stack_level) || 0,
       })
       setShowCreate(false)
-      setForm({ code: '', description: '', weight_kg: '', x_meters: '', y_meters: '' })
+      setForm({ code: '', description: '', weight_kg: '', x_meters: '', y_meters: '', block_label: '', row: '', col: '', stack_level: '0' })
       loadContainers(yardId)
     } catch (err: any) {
       setCreateError(err.message || 'Erro ao criar container')
@@ -176,6 +185,35 @@ export default function ContainersPage() {
                     placeholder="0" step="0.1" />
                 </div>
               </div>
+              <div className="pt-2 border-t border-harbor-border">
+                <div className="text-xs text-harbor-muted uppercase tracking-wider mb-3">Posição na Pilha</div>
+                <div className="grid grid-cols-4 gap-3">
+                  <div>
+                    <label className="block text-[10px] text-harbor-muted mb-1">Bloco</label>
+                    <input type="text" value={form.block_label} onChange={(e) => setForm({ ...form, block_label: e.target.value })}
+                      className="w-full px-3 py-2 bg-harbor-bg border border-harbor-border rounded-lg text-harbor-text font-mono text-sm focus:border-harbor-accent focus:outline-none"
+                      placeholder="A" maxLength={10} />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] text-harbor-muted mb-1">Fila</label>
+                    <input type="number" value={form.row} onChange={(e) => setForm({ ...form, row: e.target.value })}
+                      className="w-full px-3 py-2 bg-harbor-bg border border-harbor-border rounded-lg text-harbor-text font-mono text-sm focus:border-harbor-accent focus:outline-none"
+                      placeholder="1" min={0} />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] text-harbor-muted mb-1">Coluna</label>
+                    <input type="number" value={form.col} onChange={(e) => setForm({ ...form, col: e.target.value })}
+                      className="w-full px-3 py-2 bg-harbor-bg border border-harbor-border rounded-lg text-harbor-text font-mono text-sm focus:border-harbor-accent focus:outline-none"
+                      placeholder="1" min={0} />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] text-harbor-muted mb-1">Nível</label>
+                    <input type="number" value={form.stack_level} onChange={(e) => setForm({ ...form, stack_level: e.target.value })}
+                      className="w-full px-3 py-2 bg-harbor-bg border border-harbor-border rounded-lg text-harbor-text font-mono text-sm focus:border-harbor-accent focus:outline-none"
+                      placeholder="0" min={0} max={5} />
+                  </div>
+                </div>
+              </div>
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={() => setShowCreate(false)} className="flex-1 py-3 text-sm font-medium text-harbor-muted bg-harbor-bg border border-harbor-border rounded-lg hover:text-harbor-text transition-colors">Cancelar</button>
                 <button type="submit" disabled={creating} className="flex-1 py-3 text-sm font-bold text-white bg-harbor-accent rounded-lg hover:bg-red-600 disabled:opacity-50 transition-colors">
@@ -243,6 +281,7 @@ export default function ContainersPage() {
                   <th className="text-left px-4 py-3 text-xs text-harbor-muted uppercase tracking-wider font-medium">Código</th>
                   <th className="text-left px-4 py-3 text-xs text-harbor-muted uppercase tracking-wider font-medium">Status</th>
                   <th className="text-left px-4 py-3 text-xs text-harbor-muted uppercase tracking-wider font-medium">Posição</th>
+                  <th className="text-left px-4 py-3 text-xs text-harbor-muted uppercase tracking-wider font-medium">Pilha</th>
                   <th className="text-left px-4 py-3 text-xs text-harbor-muted uppercase tracking-wider font-medium">Peso</th>
                   <th className="text-left px-4 py-3 text-xs text-harbor-muted uppercase tracking-wider font-medium">Último Sinal</th>
                   <th className="text-right px-4 py-3 text-xs text-harbor-muted uppercase tracking-wider font-medium">Ações</th>
@@ -265,6 +304,13 @@ export default function ContainersPage() {
                       </td>
                       <td className="px-4 py-3 font-mono text-xs text-harbor-muted">
                         {c.x_meters != null ? `${c.x_meters.toFixed(1)}, ${c.y_meters?.toFixed(1)}` : '-'}
+                      </td>
+                      <td className="px-4 py-3 font-mono text-xs text-harbor-muted">
+                        {c.block_label ? (
+                          <span title={`Bloco ${c.block_label}, Fila ${c.row}, Col ${c.col}, Nível ${c.stack_level}`}>
+                            {c.block_label}-{c.row}/{c.col} <span className="text-harbor-text">N{c.stack_level}</span>
+                          </span>
+                        ) : '-'}
                       </td>
                       <td className="px-4 py-3 font-mono text-xs text-harbor-muted">
                         {c.weight_kg ? `${c.weight_kg.toLocaleString('pt-BR')} kg` : '-'}

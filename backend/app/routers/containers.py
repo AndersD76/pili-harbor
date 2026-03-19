@@ -125,3 +125,66 @@ async def update_container(
     await db.flush()
     await db.refresh(container)
     return container
+
+
+@router.delete("/{container_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_container(
+    yard_id: uuid.UUID,
+    container_id: uuid.UUID,
+    user: User = Depends(get_current_user),
+    tenant: Tenant = Depends(get_current_tenant),
+    db: AsyncSession = Depends(get_db),
+):
+    from datetime import datetime, timezone
+
+    result = await db.execute(
+        select(Container).where(
+            Container.id == container_id,
+            Container.yard_id == yard_id,
+            Container.tenant_id == tenant.id,
+            Container.deleted_at.is_(None),
+        )
+    )
+    container = result.scalar_one_or_none()
+    if not container:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Container não encontrado")
+
+    container.deleted_at = datetime.now(timezone.utc)
+    await db.flush()
+
+
+@router.get("/{container_id}/stack", response_model=list[ContainerResponse])
+async def get_stack(
+    yard_id: uuid.UUID,
+    container_id: uuid.UUID,
+    tenant: Tenant = Depends(get_current_tenant),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get all containers in the same stack position, ordered by level."""
+    result = await db.execute(
+        select(Container).where(
+            Container.id == container_id,
+            Container.tenant_id == tenant.id,
+            Container.deleted_at.is_(None),
+        )
+    )
+    container = result.scalar_one_or_none()
+    if not container:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Container não encontrado")
+
+    if not container.block_label or container.row is None or container.col is None:
+        return [ContainerResponse.model_validate(container)]
+
+    stack_result = await db.execute(
+        select(Container)
+        .where(
+            Container.yard_id == yard_id,
+            Container.tenant_id == tenant.id,
+            Container.block_label == container.block_label,
+            Container.row == container.row,
+            Container.col == container.col,
+            Container.deleted_at.is_(None),
+        )
+        .order_by(Container.stack_level.asc())
+    )
+    return stack_result.scalars().all()
