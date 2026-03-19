@@ -17,31 +17,47 @@ def _get_client() -> anthropic.AsyncAnthropic:
     return anthropic.AsyncAnthropic(api_key=settings.ANTHROPIC_API_KEY)
 
 
-OPTIMIZER_SYSTEM_PROMPT = """Você é um otimizador logístico industrial especializado em operações de pátio.
+OPTIMIZER_SYSTEM_PROMPT = """Você é um otimizador logístico industrial especializado em operações de pátio de containers.
 Sua função é analisar manifestos de carga e otimizar a sequência de tarefas para empilhadeiras.
 
-REGRAS:
+REGRAS CRÍTICAS:
 - Responda SEMPRE em JSON válido, sem markdown, sem blocos de código
-- Minimize a distância total percorrida pelas empilhadeiras
-- Respeite a sequência obrigatória do manifesto quando especificada
+- ANALISE TODAS as movimentações necessárias ANTES de definir a sequência
+- Se um container-alvo tem containers empilhados acima, INCLUA movimentações intermediárias para desempilhar
+- Minimize o número TOTAL de movimentações (remanejamentos + carregamentos + descarregamentos)
+- Quando desempilhar, escolha posições temporárias que NÃO bloqueiem outros containers da lista
 - Balanceie a carga de trabalho entre as empilhadeiras disponíveis
-- Priorize containers que bloqueiam o acesso a outros containers
+- Respeite a capacidade máxima de empilhamento (max_stack) de cada posição
 - Todas as instruções devem ser em português brasileiro
+
+CONCEITOS:
+- stack_level: nível na pilha (0=chão, 1=primeiro em cima, etc)
+- block_label + row + col: posição no pátio (ex: Bloco A, Fila 3, Coluna 2)
+- Para acessar container no nível N, TODOS os containers de nível > N devem ser removidos primeiro
+- Movimentações intermediárias (desempilhar) devem ter type="rearrange"
+- Movimentações do manifesto devem ter type="relocate" ou "load"/"unload"
 
 FORMATO DE RESPOSTA:
 {
     "task_assignments": [
         {
+            "sequence": 1,
             "container_id": "uuid",
             "forklift_id": "uuid",
+            "type": "relocate|rearrange|load|unload",
             "priority": 1-10,
             "estimated_duration_seconds": int,
+            "destination_label": "string - posição destino (ex: Bloco B, Fila 2, Col 1, Nível 0)",
+            "destination_x": float or null,
+            "destination_y": float or null,
             "waypoints": [{"x": float, "y": float}],
-            "instructions": "string em português"
+            "instructions": "string em português explicando o que fazer e por quê"
         }
     ],
+    "total_movements": int,
+    "rearrangements_needed": int,
     "total_estimated_time_seconds": int,
-    "optimization_notes": "string em português com observações sobre a otimização"
+    "optimization_notes": "string em português explicando a estratégia global"
 }"""
 
 
@@ -51,18 +67,24 @@ async def optimize_manifest(
     forklifts: list[dict],
     tenant_id: str,
     yard_id: str,
+    all_yard_containers: list[dict] | None = None,
 ) -> None:
     """
     Optimize manifest task assignments using Claude API.
+    Considers ALL containers in the yard (stacking) before planning.
     Runs asynchronously - publishes result via WebSocket when done.
     """
     client = _get_client()
 
-    user_prompt = json.dumps({
+    data = {
         "manifest_id": str(manifest_id),
-        "containers": containers,
-        "forklifts": forklifts,
-    }, ensure_ascii=False)
+        "target_containers": containers,
+        "available_forklifts": forklifts,
+    }
+    if all_yard_containers:
+        data["all_yard_containers"] = all_yard_containers
+
+    user_prompt = json.dumps(data, ensure_ascii=False)
 
     try:
         response = await client.messages.create(

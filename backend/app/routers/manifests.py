@@ -128,6 +128,7 @@ async def optimize(
     if manifest.containers_data and "container_ids" in manifest.containers_data:
         container_ids = manifest.containers_data["container_ids"]
 
+    # Target containers (from manifest)
     containers_result = await db.execute(
         select(Container).where(
             Container.id.in_([uuid.UUID(cid) for cid in container_ids]),
@@ -135,16 +136,38 @@ async def optimize(
             Container.deleted_at.is_(None),
         )
     )
-    containers = [
-        {
+
+    def _container_dict(c):
+        return {
             "id": str(c.id),
             "code": c.code,
             "x": c.x_meters,
             "y": c.y_meters,
             "weight_kg": c.weight_kg,
             "status": c.status,
+            "stack_level": c.stack_level,
+            "block_label": c.block_label,
+            "row": c.row,
+            "col": c.col,
+            "max_stack": c.max_stack,
         }
+
+    target_containers = [
+        _container_dict(c)
         for c in containers_result.scalars().all()
+    ]
+
+    # ALL containers in the yard (for stack analysis)
+    all_result = await db.execute(
+        select(Container).where(
+            Container.yard_id == yard_id,
+            Container.tenant_id == tenant.id,
+            Container.deleted_at.is_(None),
+        )
+    )
+    all_yard_containers = [
+        _container_dict(c)
+        for c in all_result.scalars().all()
     ]
 
     forklifts_result = await db.execute(
@@ -165,12 +188,22 @@ async def optimize(
         for f in forklifts_result.scalars().all()
     ]
 
-    # Launch AI optimization asynchronously
+    # Launch AI optimization asynchronously with full yard state
     asyncio.create_task(
-        optimize_manifest(manifest_id, containers, forklifts, str(tenant.id), str(yard_id))
+        optimize_manifest(
+            manifest_id,
+            target_containers,
+            forklifts,
+            str(tenant.id),
+            str(yard_id),
+            all_yard_containers=all_yard_containers,
+        )
     )
 
-    return {"status": "processing", "message": "Otimização em andamento. O resultado será enviado via WebSocket."}
+    return {
+        "status": "processing",
+        "message": "IA analisando todos os containers e pilhas. O resultado será enviado via WebSocket.",
+    }
 
 
 @router.post("/{manifest_id}/activate")
@@ -201,22 +234,39 @@ async def activate_manifest(
     ai_result = manifest.ai_optimization_result
     task_assignments = ai_result.get("task_assignments", [])
 
+    # Sort by sequence to ensure correct execution order
+    task_assignments.sort(
+        key=lambda a: a.get("sequence", 999)
+    )
+
     created_tasks = []
-    for assignment in task_assignments:
+    for i, assignment in enumerate(task_assignments):
         container_id = uuid.UUID(assignment["container_id"])
-        forklift_id = uuid.UUID(assignment["forklift_id"]) if assignment.get("forklift_id") else None
+        forklift_id = (
+            uuid.UUID(assignment["forklift_id"])
+            if assignment.get("forklift_id")
+            else None
+        )
+
+        # Priority decreases with sequence so earlier tasks run first
+        priority = max(1, 10 - i)
 
         task = Task(
             tenant_id=tenant.id,
             yard_id=yard_id,
             manifest_id=manifest_id,
             container_id=container_id,
-            type="relocate",
-            priority=assignment.get("priority", 5),
+            type=assignment.get("type", "relocate"),
+            priority=priority,
             status="pending",
+            destination_label=assignment.get("destination_label"),
+            destination_x=assignment.get("destination_x"),
+            destination_y=assignment.get("destination_y"),
             ai_instructions=assignment.get("instructions"),
             ai_route={"waypoints": assignment.get("waypoints", [])},
-            estimated_duration_seconds=assignment.get("estimated_duration_seconds"),
+            estimated_duration_seconds=assignment.get(
+                "estimated_duration_seconds"
+            ),
         )
         db.add(task)
         await db.flush()
@@ -229,8 +279,14 @@ async def activate_manifest(
     manifest.status = "active"
     await db.flush()
 
+    rearrangements = sum(
+        1 for t in created_tasks if t.type == "rearrange"
+    )
+
     return {
         "status": "activated",
         "tasks_created": len(created_tasks),
+        "rearrangements": rearrangements,
+        "optimization_notes": ai_result.get("optimization_notes"),
         "tasks": [TaskResponse.model_validate(t) for t in created_tasks],
     }

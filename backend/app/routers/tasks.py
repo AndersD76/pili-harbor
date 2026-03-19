@@ -7,7 +7,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
 from app.middleware.auth import get_current_user
 from app.middleware.tenant import get_current_tenant
-from app.models.container import Container
 from app.models.task import Task
 from app.models.tenant import Tenant
 from app.models.user import User
@@ -56,35 +55,6 @@ async def create_task(
     db: AsyncSession = Depends(get_db),
 ):
     await _get_yard(yard_id, tenant, db)
-
-    # Check if container is blocked by containers stacked above it
-    container_result = await db.execute(
-        select(Container).where(Container.id == body.container_id, Container.tenant_id == tenant.id)
-    )
-    container = container_result.scalar_one_or_none()
-    if not container:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Container não encontrado")
-
-    if container.block_label and container.row is not None and container.col is not None:
-        # Find containers stacked above this one at same position
-        blocking = await db.execute(
-            select(Container).where(
-                Container.yard_id == yard_id,
-                Container.tenant_id == tenant.id,
-                Container.block_label == container.block_label,
-                Container.row == container.row,
-                Container.col == container.col,
-                Container.stack_level > container.stack_level,
-                Container.deleted_at.is_(None),
-            )
-        )
-        blockers = blocking.scalars().all()
-        if blockers:
-            blocker_codes = ", ".join(b.code for b in blockers)
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail=f"Container bloqueado. Remova primeiro: {blocker_codes} (nível{'s' if len(blockers) > 1 else ''} acima)",
-            )
 
     task = Task(
         tenant_id=tenant.id,

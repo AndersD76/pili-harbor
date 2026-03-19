@@ -251,11 +251,46 @@ export default function ManifestsPage() {
                       </span>
                     </div>
                     {m.ai_optimization_result && m.status === 'draft' && (
-                      <div className="mt-3 flex items-center gap-2 text-xs text-harbor-green">
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        Otimização pronta - pode ativar
+                      <div className="mt-3 space-y-2">
+                        <div className="flex items-center gap-2 text-xs text-harbor-green">
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          IA concluiu a análise - sequência pronta
+                        </div>
+                        {(m.ai_optimization_result as any).optimization_notes && (
+                          <p className="text-xs text-harbor-muted bg-harbor-bg p-3 rounded-lg border border-harbor-border">
+                            {(m.ai_optimization_result as any).optimization_notes}
+                          </p>
+                        )}
+                        <div className="flex gap-4 text-[11px] text-harbor-muted">
+                          {(m.ai_optimization_result as any).total_movements && (
+                            <span>{(m.ai_optimization_result as any).total_movements} movimentações</span>
+                          )}
+                          {(m.ai_optimization_result as any).rearrangements_needed > 0 && (
+                            <span className="text-amber-400">
+                              {(m.ai_optimization_result as any).rearrangements_needed} remanejamentos (desempilhar)
+                            </span>
+                          )}
+                        </div>
+                        {(m.ai_optimization_result as any).task_assignments && (
+                          <div className="max-h-40 overflow-y-auto border border-harbor-border rounded-lg divide-y divide-harbor-border">
+                            {((m.ai_optimization_result as any).task_assignments as any[]).map((t: any, i: number) => (
+                              <div key={i} className="px-3 py-2 text-xs flex items-center gap-3">
+                                <span className="font-mono text-harbor-muted w-6 text-right">{t.sequence || i + 1}.</span>
+                                <span className={`px-1.5 py-0.5 rounded text-[10px] ${
+                                  t.type === 'rearrange' ? 'bg-amber-400/10 text-amber-400' : 'bg-blue-400/10 text-blue-400'
+                                }`}>
+                                  {t.type === 'rearrange' ? 'DESEMPILHAR' : t.type?.toUpperCase() || 'RELOCAR'}
+                                </span>
+                                <span className="text-harbor-text font-mono">{t.container_id?.slice(0, 8)}</span>
+                                {t.destination_label && (
+                                  <span className="text-harbor-muted">→ {t.destination_label}</span>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
