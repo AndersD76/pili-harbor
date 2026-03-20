@@ -92,6 +92,13 @@ async def proxy_frontend(request: Request, full_path: str):
             resp = await client.get(url, headers=proxy_headers, timeout=10)
             skip = {"content-encoding", "transfer-encoding", "connection", "keep-alive"}
             headers = {k: v for k, v in resp.headers.items() if k.lower() not in skip}
+
+            # Rewrite Location header to use public URL instead of internal 127.0.0.1:3000
+            if "location" in headers:
+                loc = headers["location"]
+                if "127.0.0.1:3000" in loc:
+                    headers["location"] = loc.replace("http://127.0.0.1:3000", "")
+
             return StreamingResponse(
                 iter([resp.content]),
                 status_code=resp.status_code,
