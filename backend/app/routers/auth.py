@@ -84,14 +84,33 @@ async def register(body: RegisterRequest, db: AsyncSession = Depends(get_db)):
 
 @router.post("/login", response_model=TokenResponse)
 async def login(body: LoginRequest, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(User).where(User.email == body.email))
+    import logging
+    logger = logging.getLogger(__name__)
+
+    try:
+        result = await db.execute(select(User).where(User.email == body.email))
+    except Exception as e:
+        logger.error(f"Database error during login: {e}")
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Erro de conexão com o banco de dados. Tente novamente.")
+
     user = result.scalar_one_or_none()
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Email não cadastrado. Crie uma conta primeiro.")
     if not user.active:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Conta desativada. Entre em contato com o suporte.")
-    if not verify_password(body.password, user.password_hash):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Senha incorreta")
+
+    if not user.password_hash:
+        logger.error(f"User {user.email} has no password_hash set")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro na conta. Entre em contato com o suporte.")
+
+    try:
+        if not verify_password(body.password, user.password_hash):
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Senha incorreta")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Password verification error for {user.email}: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro ao verificar senha. Entre em contato com o suporte.")
 
     access_token = create_access_token({"sub": str(user.id), "tenant_id": str(user.tenant_id), "role": user.role})
     refresh_token = create_refresh_token({"sub": str(user.id), "tenant_id": str(user.tenant_id)})

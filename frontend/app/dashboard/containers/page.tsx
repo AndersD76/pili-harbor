@@ -7,6 +7,13 @@ import { api } from '@/lib/api'
 interface Container {
   id: string
   code: string
+  iso_type: string | null
+  cargo_type: string
+  cargo_description: string | null
+  imo_class: string | null
+  ncm_code: string | null
+  is_reefer: boolean
+  reefer_temp_celsius: number | null
   description: string | null
   weight_kg: number | null
   status: string
@@ -20,6 +27,14 @@ interface Container {
   position_confidence: number | null
   last_seen_at: string | null
   created_at: string
+}
+
+const cargoConfig: Record<string, { label: string; color: string; bg: string }> = {
+  general: { label: 'Geral', color: 'text-gray-400', bg: 'bg-gray-400/10' },
+  reefer: { label: 'Reefer', color: 'text-cyan-400', bg: 'bg-cyan-400/10' },
+  imo: { label: 'IMO', color: 'text-red-400', bg: 'bg-red-400/10' },
+  bulk: { label: 'Granel', color: 'text-amber-400', bg: 'bg-amber-400/10' },
+  empty: { label: 'Vazio', color: 'text-gray-500', bg: 'bg-gray-500/10' },
 }
 
 const statusConfig: Record<string, { label: string; color: string; bg: string; border: string; dot: string }> = {
@@ -36,7 +51,7 @@ export default function ContainersPage() {
   const [showCreate, setShowCreate] = useState(false)
   const [creating, setCreating] = useState(false)
   const [createError, setCreateError] = useState<string | null>(null)
-  const [form, setForm] = useState({ code: '', description: '', weight_kg: '', x_meters: '', y_meters: '', block_label: '', row: '', col: '', stack_level: '0' })
+  const [form, setForm] = useState({ code: '', cargo_type: 'general', cargo_description: '', iso_type: '', imo_class: '', ncm_code: '', is_reefer: false, reefer_temp_celsius: '', description: '', weight_kg: '', x_meters: '', y_meters: '', block_label: '', row: '', col: '', stack_level: '0' })
   const [search, setSearch] = useState('')
   const [yardId, setYardId] = useState<string | null>(null)
 
@@ -61,6 +76,13 @@ export default function ContainersPage() {
     try {
       await api.post(`/api/v1/yards/${yardId}/containers`, {
         code: form.code,
+        cargo_type: form.cargo_type,
+        cargo_description: form.cargo_description || null,
+        iso_type: form.iso_type || null,
+        imo_class: form.imo_class || null,
+        ncm_code: form.ncm_code || null,
+        is_reefer: form.is_reefer,
+        reefer_temp_celsius: form.reefer_temp_celsius ? Number(form.reefer_temp_celsius) : null,
         description: form.description || null,
         weight_kg: form.weight_kg ? Number(form.weight_kg) : null,
         x_meters: form.x_meters ? Number(form.x_meters) : null,
@@ -71,7 +93,7 @@ export default function ContainersPage() {
         stack_level: Number(form.stack_level) || 0,
       })
       setShowCreate(false)
-      setForm({ code: '', description: '', weight_kg: '', x_meters: '', y_meters: '', block_label: '', row: '', col: '', stack_level: '0' })
+      setForm({ code: '', cargo_type: 'general', cargo_description: '', iso_type: '', imo_class: '', ncm_code: '', is_reefer: false, reefer_temp_celsius: '', description: '', weight_kg: '', x_meters: '', y_meters: '', block_label: '', row: '', col: '', stack_level: '0' })
       loadContainers(yardId)
     } catch (err: any) {
       setCreateError(err.message || 'Erro ao criar container')
@@ -159,12 +181,55 @@ export default function ContainersPage() {
                   className="w-full px-4 py-3 bg-harbor-bg border border-harbor-border rounded-lg text-harbor-text font-mono focus:border-harbor-accent focus:outline-none"
                   placeholder="Ex: CNTR-001" required />
               </div>
-              <div>
-                <label className="block text-xs text-harbor-muted uppercase tracking-wider mb-2">Descrição</label>
-                <input type="text" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })}
-                  className="w-full px-4 py-3 bg-harbor-bg border border-harbor-border rounded-lg text-harbor-text focus:border-harbor-accent focus:outline-none"
-                  placeholder="Ex: Container de peças automotivas" />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs text-harbor-muted uppercase tracking-wider mb-2">Tipo de Carga *</label>
+                  <select value={form.cargo_type} onChange={(e) => setForm({ ...form, cargo_type: e.target.value, is_reefer: e.target.value === 'reefer' })}
+                    className="w-full px-4 py-3 bg-harbor-bg border border-harbor-border rounded-lg text-harbor-text focus:border-harbor-accent focus:outline-none">
+                    <option value="general">Carga Geral</option>
+                    <option value="reefer">Refrigerado (Reefer)</option>
+                    <option value="imo">IMO / Perigosa</option>
+                    <option value="bulk">Granel</option>
+                    <option value="empty">Vazio</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs text-harbor-muted uppercase tracking-wider mb-2">Tipo ISO</label>
+                  <input type="text" value={form.iso_type} onChange={(e) => setForm({ ...form, iso_type: e.target.value })}
+                    className="w-full px-4 py-3 bg-harbor-bg border border-harbor-border rounded-lg text-harbor-text font-mono focus:border-harbor-accent focus:outline-none"
+                    placeholder="Ex: 22G1, 42G1, 45R1" maxLength={10} />
+                </div>
               </div>
+              <div>
+                <label className="block text-xs text-harbor-muted uppercase tracking-wider mb-2">Descrição da Carga</label>
+                <input type="text" value={form.cargo_description} onChange={(e) => setForm({ ...form, cargo_description: e.target.value })}
+                  className="w-full px-4 py-3 bg-harbor-bg border border-harbor-border rounded-lg text-harbor-text focus:border-harbor-accent focus:outline-none"
+                  placeholder="Ex: Peças automotivas" />
+              </div>
+              {form.cargo_type === 'imo' && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs text-harbor-muted uppercase tracking-wider mb-2">Classe IMO *</label>
+                    <input type="text" value={form.imo_class} onChange={(e) => setForm({ ...form, imo_class: e.target.value })}
+                      className="w-full px-4 py-3 bg-harbor-bg border border-harbor-border rounded-lg text-harbor-text font-mono focus:border-harbor-accent focus:outline-none"
+                      placeholder="Ex: 3, 5.1, 8" />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-harbor-muted uppercase tracking-wider mb-2">NCM</label>
+                    <input type="text" value={form.ncm_code} onChange={(e) => setForm({ ...form, ncm_code: e.target.value })}
+                      className="w-full px-4 py-3 bg-harbor-bg border border-harbor-border rounded-lg text-harbor-text font-mono focus:border-harbor-accent focus:outline-none"
+                      placeholder="Ex: 2807.00.10" />
+                  </div>
+                </div>
+              )}
+              {form.cargo_type === 'reefer' && (
+                <div>
+                  <label className="block text-xs text-harbor-muted uppercase tracking-wider mb-2">Temperatura Alvo (°C)</label>
+                  <input type="number" value={form.reefer_temp_celsius} onChange={(e) => setForm({ ...form, reefer_temp_celsius: e.target.value })}
+                    className="w-full px-4 py-3 bg-harbor-bg border border-harbor-border rounded-lg text-harbor-text font-mono focus:border-harbor-accent focus:outline-none"
+                    placeholder="Ex: -18" step="0.1" />
+                </div>
+              )}
               <div>
                 <label className="block text-xs text-harbor-muted uppercase tracking-wider mb-2">Peso (kg)</label>
                 <input type="number" value={form.weight_kg} onChange={(e) => setForm({ ...form, weight_kg: e.target.value })}
@@ -279,6 +344,7 @@ export default function ContainersPage() {
               <thead>
                 <tr className="border-b border-harbor-border">
                   <th className="text-left px-4 py-3 text-xs text-harbor-muted uppercase tracking-wider font-medium">Código</th>
+                  <th className="text-left px-4 py-3 text-xs text-harbor-muted uppercase tracking-wider font-medium">Carga</th>
                   <th className="text-left px-4 py-3 text-xs text-harbor-muted uppercase tracking-wider font-medium">Status</th>
                   <th className="text-left px-4 py-3 text-xs text-harbor-muted uppercase tracking-wider font-medium">Posição</th>
                   <th className="text-left px-4 py-3 text-xs text-harbor-muted uppercase tracking-wider font-medium">Pilha</th>
@@ -294,7 +360,16 @@ export default function ContainersPage() {
                     <tr key={c.id} className="hover:bg-harbor-bg/50 transition-colors">
                       <td className="px-4 py-3">
                         <div className="font-mono font-semibold text-harbor-text">{c.code}</div>
-                        {c.description && <div className="text-xs text-harbor-muted mt-0.5">{c.description}</div>}
+                        {c.cargo_description && <div className="text-xs text-harbor-muted mt-0.5">{c.cargo_description}</div>}
+                      </td>
+                      <td className="px-4 py-3">
+                        {(() => { const cg = cargoConfig[c.cargo_type] || cargoConfig.general; return (
+                          <div>
+                            <span className={`px-2 py-0.5 rounded text-xs font-medium ${cg.color} ${cg.bg}`}>{cg.label}</span>
+                            {c.imo_class && <div className="text-xs text-red-400 mt-0.5">IMO {c.imo_class}</div>}
+                            {c.is_reefer && c.reefer_temp_celsius != null && <div className="text-xs text-cyan-400 mt-0.5">{c.reefer_temp_celsius}°C</div>}
+                          </div>
+                        )})()}
                       </td>
                       <td className="px-4 py-3">
                         <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${status.color} ${status.bg} border ${status.border}`}>

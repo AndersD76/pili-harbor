@@ -7,12 +7,22 @@ from pydantic import BaseModel
 
 class ManifestCreate(BaseModel):
     name: str
+    operation_type: str = "loading"  # loading, discharge, rearrange
+    vessel_name: str | None = None
+    vessel_imo: str | None = None
+    voyage_number: str | None = None
+    port_locode: str | None = None
     deadline_at: datetime | None = None
     containers_data: dict[str, Any] | None = None
 
 
 class ManifestUpdate(BaseModel):
     name: str | None = None
+    operation_type: str | None = None
+    vessel_name: str | None = None
+    vessel_imo: str | None = None
+    voyage_number: str | None = None
+    port_locode: str | None = None
     status: str | None = None
     deadline_at: datetime | None = None
     containers_data: dict[str, Any] | None = None
@@ -23,6 +33,11 @@ class ManifestResponse(BaseModel):
     tenant_id: uuid.UUID
     yard_id: uuid.UUID
     name: str
+    operation_type: str
+    vessel_name: str | None
+    vessel_imo: str | None
+    voyage_number: str | None
+    port_locode: str | None
     status: str
     deadline_at: datetime | None
     containers_data: dict[str, Any] | None

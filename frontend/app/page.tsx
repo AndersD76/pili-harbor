@@ -104,6 +104,7 @@ export default function LandingPage() {
             <a href="#modulos" className="hover:text-white transition-colors">Módulos</a>
             <a href="#ia" className="hover:text-white transition-colors">IA</a>
             <a href="#eaze" className="hover:text-white transition-colors">Eaze</a>
+            <a href="#compliance" className="hover:text-white transition-colors">Compliance</a>
             <a href="#contato" className="hover:text-white transition-colors">Contato</a>
             <Link href="/login" className="px-5 py-2 bg-red-600 hover:bg-red-500 rounded-lg text-white font-medium transition-colors">
               Entrar
@@ -120,6 +121,7 @@ export default function LandingPage() {
             <a href="#modulos" className="block text-gray-400 hover:text-white" onClick={() => setMobileMenu(false)}>Módulos</a>
             <a href="#ia" className="block text-gray-400 hover:text-white" onClick={() => setMobileMenu(false)}>IA</a>
             <a href="#eaze" className="block text-gray-400 hover:text-white" onClick={() => setMobileMenu(false)}>Eaze</a>
+            <a href="#compliance" className="block text-gray-400 hover:text-white" onClick={() => setMobileMenu(false)}>Compliance</a>
             <a href="#contato" className="block text-gray-400 hover:text-white" onClick={() => setMobileMenu(false)}>Contato</a>
             <Link href="/login" className="block text-center px-5 py-2 bg-red-600 rounded-lg text-white font-medium" onClick={() => setMobileMenu(false)}>Entrar</Link>
           </div>
@@ -148,8 +150,8 @@ export default function LandingPage() {
             </h1>
             <p className="text-lg text-gray-400 max-w-xl mb-10 leading-relaxed">
               Rastreamento em tempo real, otimização com IA e app do operador.
-              Gestão completa de containers empilhados, manifestos inteligentes
-              e operação de pátio integrada do admin ao operador.
+              Gestão completa de containers com segregação IMDG, monitoramento reefer,
+              controle aduaneiro e compliance ANTAQ integrado.
             </p>
             <div className="flex flex-wrap gap-4">
               <a href="#contato" className="px-8 py-4 bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 rounded-xl text-white font-bold text-lg transition-all shadow-lg shadow-red-500/25 hover:shadow-red-500/40">
@@ -508,12 +510,12 @@ export default function LandingPage() {
           </div>
           <div className="grid md:grid-cols-3 gap-6">
             {[
-              { title: 'Gestão de Empilhadeiras', desc: 'Cadastre empilhadeiras com código único. Acompanhe status (disponível, trabalhando, offline, manutenção), posição e último sinal. Atribua operadores.', color: 'blue' },
-              { title: 'Gestão de Usuários', desc: 'Crie contas de operadores, supervisores e admins. Defina perfis de acesso. O operador recebe email/senha e acessa o Eaze direto.', color: 'purple' },
-              { title: 'Configurações & Plano', desc: 'Visualize dados da empresa, limites do plano (pátios, containers, empilhadeiras), gerencie múltiplos pátios e acesse de qualquer lugar.', color: 'green' },
-              { title: 'Alertas em Tempo Real', desc: 'Notificações automáticas: container sem sinal, empilhadeira offline, prazo de manifesto, tarefas reatribuídas. Tudo via WebSocket.', color: 'red' },
-              { title: 'Multi-pátio', desc: 'Gerencie múltiplos pátios na mesma conta. Cada pátio tem suas dimensões, containers, empilhadeiras e equipe. Troque entre eles com um clique.', color: 'amber' },
-              { title: 'Segurança', desc: 'Rotas protegidas com middleware de autenticação. Tokens JWT. Isolamento por tenant — cada empresa vê apenas seus dados. CORS configurado.', color: 'gray' },
+              { title: 'Gate Operations (EIR)', desc: 'Gate-in e gate-out com registro de lacre, avarias, VGM (SOLAS), motorista e placa. Bloqueio automático para containers em canal vermelho/cinza.', color: 'green' },
+              { title: 'Segregação IMDG', desc: 'Tabela de segregação 7.2.4 completa. Validação automática de distâncias mínimas (3-24m) entre classes IMO incompatíveis. Bloqueio de empilhamento IMO/não-IMO.', color: 'red' },
+              { title: 'Monitoramento Reefer', desc: 'Painel de reefers com temperatura set/atual, status de energia e alarmes. Alerta automático se desvio > 2°C ou queda de energia. Tracking de PTI.', color: 'blue' },
+              { title: 'Permanência (Dwell Time)', desc: 'Free time ANTAQ (7 dias geral, 5 dias reefer). Alertas visuais quando próximo do vencimento. Cálculo automático de demurrage.', color: 'amber' },
+              { title: 'Controle Aduaneiro', desc: 'Canais de parametrização (verde/amarelo/vermelho/cinza). Canal vermelho bloqueia gate-out automaticamente. Integração com status SISCOMEX.', color: 'purple' },
+              { title: 'Import/Export XML', desc: 'Manifestos em formato COPRAR/BAPLIE. Importação de XML com matching automático de containers. Exportação para integração com Porto Sem Papel.', color: 'gray' },
             ].map((feat, i) => (
               <div key={i} className="backdrop-blur-xl bg-white/[0.02] rounded-2xl border border-white/5 p-8 hover:border-red-500/20 hover:bg-white/[0.04] transition-all duration-300">
                 <div className={`w-10 h-10 rounded-xl bg-${feat.color}-500/10 flex items-center justify-center mb-4`}>
@@ -521,6 +523,35 @@ export default function LandingPage() {
                 </div>
                 <h3 className="text-lg font-bold mb-2">{feat.title}</h3>
                 <p className="text-sm text-gray-500 leading-relaxed">{feat.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ══════ COMPLIANCE ══════ */}
+      <section id="compliance" className="py-24 border-t border-white/5">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="text-center mb-16">
+            <span className="text-xs text-red-500 uppercase tracking-[0.3em] font-mono">Compliance</span>
+            <h2 className="text-4xl lg:text-5xl font-black mt-4">Legislação atendida</h2>
+            <p className="text-gray-500 mt-4 max-w-2xl mx-auto">Conformidade com regulamentações brasileiras e padrões internacionais integrada ao sistema.</p>
+          </div>
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {[
+              { code: 'ANTAQ', title: 'Res. 72/2022 e 112/2024', desc: 'Free time, demurrage, desempenho portuário (SDP)' },
+              { code: 'IMDG', title: 'Code 7.2.4', desc: 'Segregação de cargas perigosas, distâncias mínimas, classes IMO' },
+              { code: 'SOLAS', title: 'VGM', desc: 'Verified Gross Mass obrigatório no gate-in' },
+              { code: 'NR-29', title: 'Segurança Portuária', desc: 'Regras de empilhamento, alturas máximas por tipo' },
+              { code: 'ISPS', title: 'Security Code', desc: 'Controle de acesso, registro de gate, rastreamento' },
+              { code: 'RFB', title: 'API Recintos', desc: 'Canais de parametrização, controle aduaneiro, bloqueio' },
+              { code: 'PSP', title: 'Porto Sem Papel', desc: 'XML compatível, campos DL-e, integração PORTOLOG' },
+              { code: 'NCM', title: 'Mercosul', desc: 'Classificação fiscal de mercadorias por container' },
+            ].map((reg, i) => (
+              <div key={i} className="bg-white/[0.02] border border-white/5 rounded-xl p-5 hover:border-red-500/20 transition-colors">
+                <div className="text-red-500 font-mono font-bold text-sm mb-1">{reg.code}</div>
+                <div className="text-white font-semibold text-sm mb-2">{reg.title}</div>
+                <div className="text-gray-500 text-xs leading-relaxed">{reg.desc}</div>
               </div>
             ))}
           </div>

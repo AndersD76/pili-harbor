@@ -7,6 +7,11 @@ import { api } from '@/lib/api'
 interface Manifest {
   id: string
   name: string
+  operation_type: string
+  vessel_name: string | null
+  vessel_imo: string | null
+  voyage_number: string | null
+  port_locode: string | null
   status: string
   deadline_at: string | null
   created_at: string
@@ -26,7 +31,8 @@ export default function ManifestsPage() {
   const [creating, setCreating] = useState(false)
   const [createError, setCreateError] = useState<string | null>(null)
   const [containers, setContainers] = useState<ContainerOption[]>([])
-  const [mForm, setMForm] = useState({ name: '', deadline_at: '', selectedContainers: [] as string[] })
+  const [mForm, setMForm] = useState({ name: '', operation_type: 'loading', vessel_name: '', vessel_imo: '', voyage_number: '', port_locode: '', deadline_at: '', selectedContainers: [] as string[] })
+  const [importing, setImporting] = useState(false)
 
   useEffect(() => {
     const id = localStorage.getItem('current_yard_id')
@@ -66,11 +72,16 @@ export default function ManifestsPage() {
     try {
       await api.post(`/api/v1/yards/${yardId}/manifests`, {
         name: mForm.name,
-        deadline_at: mForm.deadline_at || null,
+        operation_type: mForm.operation_type,
+        vessel_name: mForm.vessel_name || null,
+        vessel_imo: mForm.vessel_imo || null,
+        voyage_number: mForm.voyage_number || null,
+        port_locode: mForm.port_locode || null,
+        deadline_at: mForm.deadline_at ? new Date(mForm.deadline_at).toISOString() : null,
         containers_data: { container_ids: mForm.selectedContainers },
       })
       setShowCreate(false)
-      setMForm({ name: '', deadline_at: '', selectedContainers: [] })
+      setMForm({ name: '', operation_type: 'loading', vessel_name: '', vessel_imo: '', voyage_number: '', port_locode: '', deadline_at: '', selectedContainers: [] })
       loadManifests(yardId)
     } catch (err: any) {
       setCreateError(err.message || 'Erro ao criar manifesto')
@@ -97,6 +108,49 @@ export default function ManifestsPage() {
       // Error handled by API client
     }
     setOptimizing(null)
+  }
+
+  async function handleExportXml(manifestId: string) {
+    if (!yardId) return
+    try {
+      const token = document.cookie.split('; ').find(c => c.startsWith('access_token='))?.split('=')[1]
+      const res = await fetch(`/api/v1/yards/${yardId}/manifests/${manifestId}/xml`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      })
+      if (!res.ok) throw new Error('Erro ao exportar XML')
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = res.headers.get('content-disposition')?.split('filename="')[1]?.replace('"', '') || 'manifesto.xml'
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch { /* handled */ }
+  }
+
+  async function handleImportXml(e: React.ChangeEvent<HTMLInputElement>) {
+    if (!yardId || !e.target.files?.[0]) return
+    setImporting(true)
+    try {
+      const token = document.cookie.split('; ').find(c => c.startsWith('access_token='))?.split('=')[1]
+      const formData = new FormData()
+      formData.append('file', e.target.files[0])
+      const res = await fetch(`/api/v1/yards/${yardId}/manifests/import-xml`, {
+        method: 'POST',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        body: formData,
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ detail: 'Erro ao importar XML' }))
+        throw new Error(err.detail)
+      }
+      loadManifests(yardId)
+    } catch (err: any) {
+      setError(err.message || 'Erro ao importar XML')
+    } finally {
+      setImporting(false)
+      e.target.value = ''
+    }
   }
 
   async function handleActivate(manifestId: string) {
@@ -140,6 +194,12 @@ export default function ManifestsPage() {
     )
   }
 
+  const operationConfig: Record<string, { label: string; icon: string; color: string; bg: string }> = {
+    loading: { label: 'Embarque', icon: '⬆', color: 'text-blue-400', bg: 'bg-blue-400/10' },
+    discharge: { label: 'Desembarque', icon: '⬇', color: 'text-orange-400', bg: 'bg-orange-400/10' },
+    rearrange: { label: 'Rearranjo', icon: '↔', color: 'text-purple-400', bg: 'bg-purple-400/10' },
+  }
+
   const statusConfig: Record<string, { label: string; color: string; bg: string; border: string }> = {
     draft: { label: 'Rascunho', color: 'text-harbor-muted', bg: 'bg-harbor-muted/10', border: 'border-harbor-muted/20' },
     active: { label: 'Ativo', color: 'text-amber-400', bg: 'bg-amber-400/10', border: 'border-amber-400/20' },
@@ -167,6 +227,39 @@ export default function ManifestsPage() {
                 <input type="text" value={mForm.name} onChange={(e) => setMForm({ ...mForm, name: e.target.value })}
                   className={inputClass} placeholder="Ex: Lote Exportação Março" required />
               </div>
+              <div>
+                <label className="block text-xs text-harbor-muted uppercase tracking-wider mb-2">Tipo de Operação *</label>
+                <select value={mForm.operation_type} onChange={(e) => setMForm({ ...mForm, operation_type: e.target.value })}
+                  className={inputClass}>
+                  <option value="loading">Embarque</option>
+                  <option value="discharge">Desembarque</option>
+                  <option value="rearrange">Rearranjo</option>
+                </select>
+              </div>
+              {mForm.operation_type !== 'rearrange' && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs text-harbor-muted uppercase tracking-wider mb-2">Navio</label>
+                    <input type="text" value={mForm.vessel_name} onChange={(e) => setMForm({ ...mForm, vessel_name: e.target.value })}
+                      className={inputClass} placeholder="Ex: MSC Diana" />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-harbor-muted uppercase tracking-wider mb-2">IMO</label>
+                    <input type="text" value={mForm.vessel_imo} onChange={(e) => setMForm({ ...mForm, vessel_imo: e.target.value })}
+                      className={inputClass} placeholder="Ex: 9839284" />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-harbor-muted uppercase tracking-wider mb-2">Viagem</label>
+                    <input type="text" value={mForm.voyage_number} onChange={(e) => setMForm({ ...mForm, voyage_number: e.target.value })}
+                      className={inputClass} placeholder="Ex: MD2603E" />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-harbor-muted uppercase tracking-wider mb-2">Porto (LOCODE)</label>
+                    <input type="text" value={mForm.port_locode} onChange={(e) => setMForm({ ...mForm, port_locode: e.target.value })}
+                      className={inputClass} placeholder="Ex: BRSSZ" />
+                  </div>
+                </div>
+              )}
               <div>
                 <label className="block text-xs text-harbor-muted uppercase tracking-wider mb-2">Prazo (opcional)</label>
                 <input type="datetime-local" value={mForm.deadline_at} onChange={(e) => setMForm({ ...mForm, deadline_at: e.target.value })}
@@ -206,10 +299,17 @@ export default function ManifestsPage() {
           <h2 className="text-xl font-bold text-harbor-text">Manifestos</h2>
           <p className="text-harbor-muted text-sm mt-0.5">{manifests.length} manifesto{manifests.length !== 1 ? 's' : ''}</p>
         </div>
-        <button onClick={openCreateModal} className="px-4 py-2.5 bg-harbor-accent text-white text-sm font-semibold rounded-lg hover:bg-red-600 transition-colors inline-flex items-center gap-2">
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
-          Novo Manifesto
-        </button>
+        <div className="flex items-center gap-2">
+          <label className={`px-4 py-2.5 text-sm font-medium border border-harbor-border text-harbor-muted rounded-lg hover:text-harbor-text hover:border-harbor-accent/40 transition-colors inline-flex items-center gap-2 cursor-pointer ${importing ? 'opacity-50 pointer-events-none' : ''}`}>
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
+            {importing ? 'Importando...' : 'Importar XML'}
+            <input type="file" accept=".xml" onChange={handleImportXml} className="hidden" />
+          </label>
+          <button onClick={openCreateModal} className="px-4 py-2.5 bg-harbor-accent text-white text-sm font-semibold rounded-lg hover:bg-red-600 transition-colors inline-flex items-center gap-2">
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+            Novo Manifesto
+          </button>
+        </div>
       </div>
 
       {manifests.length === 0 ? (
@@ -232,16 +332,28 @@ export default function ManifestsPage() {
         <div className="space-y-3">
           {manifests.map((m) => {
             const status = statusConfig[m.status] || statusConfig.draft
+            const opType = operationConfig[m.operation_type] || operationConfig.loading
             return (
               <div key={m.id} className="p-5 bg-harbor-surface border border-harbor-border rounded-xl hover:border-harbor-border/80 transition-colors">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-2">
+                      <span className={`px-2 py-0.5 rounded text-xs font-medium ${opType.color} ${opType.bg}`}>
+                        {opType.icon} {opType.label}
+                      </span>
                       <h3 className="text-sm font-semibold text-harbor-text">{m.name}</h3>
                       <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${status.color} ${status.bg} border ${status.border}`}>
                         {status.label}
                       </span>
                     </div>
+                    {m.vessel_name && (
+                      <div className="flex items-center gap-3 mb-2 text-xs text-harbor-muted">
+                        <span>Navio: <span className="text-harbor-text font-medium">{m.vessel_name}</span></span>
+                        {m.vessel_imo && <span>IMO: {m.vessel_imo}</span>}
+                        {m.voyage_number && <span>Viagem: {m.voyage_number}</span>}
+                        {m.port_locode && <span>Porto: {m.port_locode}</span>}
+                      </div>
+                    )}
                     <div className="flex gap-4 text-xs text-harbor-muted">
                       {m.deadline_at && (
                         <span className="flex items-center gap-1">
@@ -302,30 +414,39 @@ export default function ManifestsPage() {
                       </div>
                     )}
                   </div>
-                  {m.status === 'draft' && (
-                    <div className="flex items-center gap-2 ml-4">
-                      <button
-                        onClick={() => handleOptimize(m.id)}
-                        disabled={optimizing === m.id}
-                        className="px-4 py-2 text-xs font-medium bg-harbor-accent/10 text-harbor-accent border border-harbor-accent/20 rounded-lg hover:bg-harbor-accent/20 disabled:opacity-50 transition-colors"
-                      >
-                        {optimizing === m.id ? (
-                          <span className="flex items-center gap-2">
-                            <div className="w-3 h-3 border border-harbor-accent border-t-transparent rounded-full animate-spin" />
-                            Otimizando...
-                          </span>
-                        ) : 'Otimizar com IA'}
-                      </button>
-                      {m.ai_optimization_result && (
+                  <div className="flex items-center gap-2 ml-4">
+                    <button
+                      onClick={() => handleExportXml(m.id)}
+                      title="Exportar XML"
+                      className="px-3 py-2 text-xs font-medium border border-harbor-border text-harbor-muted rounded-lg hover:text-harbor-text hover:border-harbor-accent/40 transition-colors"
+                    >
+                      XML
+                    </button>
+                    {m.status === 'draft' && (
+                      <>
                         <button
-                          onClick={() => handleActivate(m.id)}
-                          className="px-4 py-2 text-xs font-medium bg-harbor-green text-harbor-bg rounded-lg hover:bg-green-500 transition-colors"
+                          onClick={() => handleOptimize(m.id)}
+                          disabled={optimizing === m.id}
+                          className="px-4 py-2 text-xs font-medium bg-harbor-accent/10 text-harbor-accent border border-harbor-accent/20 rounded-lg hover:bg-harbor-accent/20 disabled:opacity-50 transition-colors"
                         >
-                          Ativar
+                          {optimizing === m.id ? (
+                            <span className="flex items-center gap-2">
+                              <div className="w-3 h-3 border border-harbor-accent border-t-transparent rounded-full animate-spin" />
+                              Otimizando...
+                            </span>
+                          ) : 'Otimizar com IA'}
                         </button>
-                      )}
-                    </div>
-                  )}
+                        {m.ai_optimization_result && (
+                          <button
+                            onClick={() => handleActivate(m.id)}
+                            className="px-4 py-2 text-xs font-medium bg-harbor-green text-harbor-bg rounded-lg hover:bg-green-500 transition-colors"
+                          >
+                            Ativar
+                          </button>
+                        )}
+                      </>
+                    )}
+                  </div>
                 </div>
               </div>
             )

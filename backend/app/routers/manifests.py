@@ -1,9 +1,15 @@
 import asyncio
+import logging
+import re
 import uuid
+import xml.etree.ElementTree as ET
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from fastapi.responses import Response
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+
+logger = logging.getLogger(__name__)
 
 from app.database import get_db
 from app.middleware.auth import get_current_user
@@ -141,6 +147,12 @@ async def optimize(
         return {
             "id": str(c.id),
             "code": c.code,
+            "iso_type": c.iso_type,
+            "cargo_type": c.cargo_type,
+            "cargo_description": c.cargo_description,
+            "imo_class": c.imo_class,
+            "is_reefer": c.is_reefer,
+            "reefer_temp_celsius": c.reefer_temp_celsius,
             "x": c.x_meters,
             "y": c.y_meters,
             "weight_kg": c.weight_kg,
@@ -290,3 +302,126 @@ async def activate_manifest(
         "optimization_notes": ai_result.get("optimization_notes"),
         "tasks": [TaskResponse.model_validate(t) for t in created_tasks],
     }
+
+
+# ── XML Export ───────────────────────────────────────────────────────────────
+
+@router.get("/{manifest_id}/xml")
+async def export_manifest_xml(
+    yard_id: uuid.UUID,
+    manifest_id: uuid.UUID,
+    tenant: Tenant = Depends(get_current_tenant),
+    db: AsyncSession = Depends(get_db),
+):
+    """Export manifest as XML (COPRAR/BAPLIE-inspired format)."""
+    from app.services.manifest_xml import generate_manifest_xml
+
+    yard = await _get_yard(yard_id, tenant, db)
+    result = await db.execute(
+        select(Manifest).where(
+            Manifest.id == manifest_id,
+            Manifest.yard_id == yard_id,
+            Manifest.tenant_id == tenant.id,
+        )
+    )
+    manifest = result.scalar_one_or_none()
+    if not manifest:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Manifesto não encontrado")
+
+    # Fetch containers
+    container_ids = []
+    if manifest.containers_data and "container_ids" in manifest.containers_data:
+        container_ids = [uuid.UUID(cid) for cid in manifest.containers_data["container_ids"]]
+
+    containers = []
+    if container_ids:
+        containers_result = await db.execute(
+            select(Container).where(
+                Container.id.in_(container_ids),
+                Container.tenant_id == tenant.id,
+            )
+        )
+        containers = list(containers_result.scalars().all())
+
+    xml_content = generate_manifest_xml(manifest, containers, yard.name)
+    safe_name = re.sub(r'[^a-zA-Z0-9._-]', '_', manifest.name)[:100]
+    filename = f"manifesto_{safe_name}_{manifest.status}.xml"
+
+    return Response(
+        content=xml_content,
+        media_type="application/xml",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+# ── XML Import ───────────────────────────────────────────────────────────────
+
+@router.post("/import-xml", response_model=ManifestResponse, status_code=status.HTTP_201_CREATED)
+async def import_manifest_xml(
+    yard_id: uuid.UUID,
+    file: UploadFile = File(...),
+    user: User = Depends(get_current_user),
+    tenant: Tenant = Depends(get_current_tenant),
+    db: AsyncSession = Depends(get_db),
+):
+    """Import a manifest from XML file. Matches containers by code in the yard."""
+    from app.services.manifest_xml import parse_manifest_xml
+
+    if user.role not in ("admin", "supervisor"):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Permissão insuficiente")
+
+    await _get_yard(yard_id, tenant, db)
+
+    content = await file.read()
+    try:
+        parsed = parse_manifest_xml(content)
+    except ET.ParseError:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="XML mal-formado. Verifique a estrutura do arquivo.")
+    except Exception as e:
+        logger.error(f"XML import error: {e}")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Erro ao processar XML. Verifique se o formato é compatível.")
+
+    # Match container codes to existing containers in the yard
+    xml_codes = [c["code"] for c in parsed["containers"]]
+    matched_ids = []
+    not_found_codes = []
+
+    if xml_codes:
+        containers_result = await db.execute(
+            select(Container).where(
+                Container.yard_id == yard_id,
+                Container.tenant_id == tenant.id,
+                Container.code.in_(xml_codes),
+                Container.deleted_at.is_(None),
+            )
+        )
+        existing = {c.code: c for c in containers_result.scalars().all()}
+
+        for code in xml_codes:
+            if code in existing:
+                matched_ids.append(str(existing[code].id))
+            else:
+                not_found_codes.append(code)
+
+    manifest = Manifest(
+        tenant_id=tenant.id,
+        yard_id=yard_id,
+        name=parsed["name"],
+        operation_type=parsed["operation_type"],
+        vessel_name=parsed.get("vessel_name"),
+        vessel_imo=parsed.get("vessel_imo"),
+        voyage_number=parsed.get("voyage_number"),
+        port_locode=parsed.get("port_locode"),
+        deadline_at=parsed.get("deadline_at"),
+        containers_data={
+            "container_ids": matched_ids,
+            "imported_from_xml": True,
+            "xml_container_codes": xml_codes,
+            "not_found_codes": not_found_codes,
+        },
+        created_by=user.id,
+    )
+    db.add(manifest)
+    await db.flush()
+    await db.refresh(manifest)
+    return manifest

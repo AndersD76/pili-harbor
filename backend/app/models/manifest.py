@@ -15,6 +15,11 @@ class Manifest(Base):
     tenant_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("tenants.id"), nullable=False, index=True)
     yard_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("yards.id"), nullable=False)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
+    operation_type: Mapped[str] = mapped_column(String(50), nullable=False, default="loading")  # loading=embarque, discharge=desembarque, rearrange=rearranjo
+    vessel_name: Mapped[str | None] = mapped_column(String(255))
+    vessel_imo: Mapped[str | None] = mapped_column(String(20))
+    voyage_number: Mapped[str | None] = mapped_column(String(50))
+    port_locode: Mapped[str | None] = mapped_column(String(10))  # UN/LOCODE e.g. BRSSZ
     status: Mapped[str] = mapped_column(String(50), nullable=False, default="draft")
     deadline_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     containers_data: Mapped[dict | None] = mapped_column(JSONB)
