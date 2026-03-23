@@ -7,6 +7,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
 from app.middleware.auth import get_current_user
 from app.middleware.tenant import get_current_tenant
+from app.models.container import Container
+from app.models.forklift import Forklift
+from app.models.manifest import Manifest
 from app.models.task import Task
 from app.models.tenant import Tenant
 from app.models.user import User
@@ -125,3 +128,102 @@ async def forklift_queue(
 ):
     tasks = await get_forklift_queue(forklift_id, tenant.id, db)
     return tasks
+
+
+@router.get("/api/v1/forklifts/{forklift_id}/manifest-package")
+async def manifest_package(
+    forklift_id: uuid.UUID,
+    user: User = Depends(get_current_user),
+    tenant: Tenant = Depends(get_current_tenant),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get offline manifest package for Eaze Android app.
+
+    Returns manifest info + ordered tasks + container coords +
+    yard GPS origin for coordinate conversion.
+    """
+    # Get forklift → yard
+    fl_result = await db.execute(
+        select(Forklift).where(
+            Forklift.id == forklift_id,
+            Forklift.tenant_id == tenant.id,
+        )
+    )
+    forklift = fl_result.scalar_one_or_none()
+    if not forklift:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Empilhadeira não encontrada",
+        )
+
+    yard_result = await db.execute(
+        select(Yard).where(Yard.id == forklift.yard_id)
+    )
+    yard = yard_result.scalar_one_or_none()
+
+    # Get tasks assigned to forklift
+    tasks_result = await db.execute(
+        select(Task).where(
+            Task.forklift_id == forklift_id,
+            Task.tenant_id == tenant.id,
+            Task.status.in_(["assigned", "in_progress", "pending"]),
+        ).order_by(Task.priority.desc(), Task.created_at.asc())
+    )
+    tasks = tasks_result.scalars().all()
+
+    # Find manifest (from first task)
+    manifest_info = None
+    if tasks:
+        first_task = tasks[0]
+        if first_task.manifest_id:
+            m_result = await db.execute(
+                select(Manifest).where(
+                    Manifest.id == first_task.manifest_id,
+                )
+            )
+            m = m_result.scalar_one_or_none()
+            if m:
+                manifest_info = {
+                    "id": str(m.id),
+                    "name": m.name,
+                    "operation_type": m.operation_type,
+                    "vessel_name": m.vessel_name,
+                }
+
+    # Build task list with container coords
+    task_list = []
+    for i, t in enumerate(tasks):
+        # Get container
+        c_result = await db.execute(
+            select(Container).where(
+                Container.id == t.container_id,
+            )
+        )
+        c = c_result.scalar_one_or_none()
+
+        task_list.append({
+            "id": str(t.id),
+            "sequence": i + 1,
+            "type": t.type,
+            "priority": t.priority,
+            "container_code": c.code if c else "?",
+            "container_x": c.x_meters or 0 if c else 0,
+            "container_y": c.y_meters or 0 if c else 0,
+            "destination_label": t.destination_label,
+            "destination_x": t.destination_x,
+            "destination_y": t.destination_y,
+            "ai_instructions": t.ai_instructions,
+        })
+
+    return {
+        "forklift_id": str(forklift_id),
+        "manifest": manifest_info,
+        "tasks": task_list,
+        "yard": {
+            "name": yard.name if yard else None,
+            "width_meters": yard.width_meters if yard else 200,
+            "height_meters": yard.height_meters if yard else 150,
+            "origin_lat": yard.origin_lat if yard else None,
+            "origin_lng": yard.origin_lng if yard else None,
+        } if yard else None,
+    }
