@@ -1,6 +1,6 @@
 """Seed demo data for admin@pilidemo.com"""
 import asyncio
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import delete, select
 
@@ -8,7 +8,9 @@ from app.database import async_session
 from app.middleware.auth import hash_password
 from app.models.container import Container
 from app.models.forklift import Forklift
+from app.models.gate_event import GateEvent
 from app.models.manifest import Manifest
+from app.models.reefer_reading import ReeferReading
 from app.models.task import Task
 from app.models.tenant import Tenant
 from app.models.user import User
@@ -268,7 +270,10 @@ async def seed():  # noqa: C901
             return
 
         # Clean partial data
-        for model in (Task, Forklift, Container, Yard):
+        for model in (
+            Task, GateEvent, ReeferReading,
+            Forklift, Container, Yard,
+        ):
             await db.execute(
                 delete(model).where(
                     model.tenant_id == tenant.id
@@ -335,6 +340,211 @@ async def seed():  # noqa: C901
                 f"Block {blk} N{c['level']} "
                 f"[{c['cargo']}]"
             )
+
+        # === Gate-in / dwell time / customs / commercial ===
+        # Dwell-time variety: days_ago per container
+        _g = dict  # shorthand for gate_data entries
+        gate_data = {
+            # Block A — arrived ~5 days ago
+            "MSCU-4471220": _g(
+                days=5, ship="MSC", bl="MSCBR2603001"),
+            "TCLU-8912445": _g(
+                days=5, ship="MSC", bl="MSCBR2603002"),
+            "CMAU-3125677": _g(
+                days=5, ship="CMA CGM", bl="CMABR2603010"),
+            "HLXU-2033891": _g(
+                days=8, ship="Hapag-Lloyd",
+                bl="HLCUBR2602005"),
+            "SUDU-6199034": _g(
+                days=8, ship="Hamburg Süd",
+                bl="SUDU2602018"),
+            "MSKU-1058823": _g(
+                days=2, ship="Maersk", bl="MAEBR2603045"),
+            "TCKU-7741556": _g(
+                days=2, ship="Maersk", bl="MAEBR2603046"),
+            # Block B — IMO, arrived ~8 days ago
+            "OOLU-3345127": _g(
+                days=8, ship="OOCL", bl="OOLU2602077"),
+            "NYKU-5567890": _g(
+                days=5, ship="ONE", bl="NYKBR2603020"),
+            "ECMU-9912345": _g(
+                days=5, ship="Evergreen",
+                bl="ECMU2603033"),
+            "TRLU-4478901": _g(
+                days=2, ship="Triton", bl="TRLU2603041"),
+            "GESU-7789012": _g(
+                days=2, ship="Gold Container", bl=None),
+            # Block C — staging, mixed ages
+            "SEGU-1123456": _g(
+                days=8, ship="MSC", bl="MSCBR2602099"),
+            "PONU-2234567": _g(
+                days=5, ship="PIL", bl="PILBR2603015"),
+            "UACU-3345678": _g(
+                days=2, ship="ZIM", bl="ZIMBR2603060"),
+            # Block D — reefer (free_time=5)
+            "YMLU-4456789": _g(
+                days=8, ship="Yang Ming",
+                bl="YMLUBR2602040"),
+            "CSLU-5567890": _g(
+                days=5, ship="Cosco",
+                bl="CSLUBR2603055"),
+            "KKFU-6678901": _g(
+                days=2, ship="K Line", bl="KKFU2603070"),
+            "WHLU-7789012": _g(
+                days=2, ship="Wan Hai", bl="WHLU2603080"),
+            # Loose / in_transit
+            "FCIU-8890123": _g(
+                days=0, ship=None, bl=None),
+        }
+
+        # Customs status overrides (default = "released")
+        customs_map = {
+            "OOLU-3345127": "red",       # Chemical, held by customs
+            "FCIU-8890123": "pending",    # In transit, not cleared
+            "ECMU-9912345": "yellow",     # Under review
+        }
+
+        for code, gd in gate_data.items():
+            c = cmap[code]
+            days = gd["days"]
+            if days > 0:
+                c.gate_in_at = now - timedelta(days=days)
+                ft = 5 if c.is_reefer else 7
+                c.free_time_days = ft
+                c.free_time_expires_at = (
+                    c.gate_in_at + timedelta(days=ft)
+                )
+                # Demurrage: if free_time expired
+                if c.free_time_expires_at < now:
+                    c.demurrage_status = "accruing"
+                else:
+                    c.demurrage_status = "none"
+            c.customs_status = customs_map.get(code, "released")
+            c.shipping_line = gd["ship"]
+            c.bl_number = gd["bl"]
+            # Seal info for stored containers
+            if days > 0:
+                c.seal_number = f"SL{code[5:12].replace('-', '')}"
+                c.seal_status = "ok"
+        await db.flush()
+        print("  Updated gate-in / dwell / customs data")
+
+        # === Reefer Readings (Block D) ===
+        reefer_readings_data = [
+            # YMLU: frozen meat, stable at -18 (3 readings)
+            ("YMLU-4456789", [
+                {"hrs": 6, "set": -18.0, "actual": -18.1,
+                 "supply": -20.0, "ret": -17.5, "hum": 85.0,
+                 "pwr": "on", "defrost": False},
+                {"hrs": 3, "set": -18.0, "actual": -18.0,
+                 "supply": -19.8, "ret": -17.6, "hum": 84.0,
+                 "pwr": "on", "defrost": False},
+                {"hrs": 0, "set": -18.0, "actual": -17.9,
+                 "supply": -19.5, "ret": -17.4, "hum": 85.0,
+                 "pwr": "on", "defrost": False},
+            ]),
+            # CSLU: tropical fruits at +2, stable
+            ("CSLU-5567890", [
+                {"hrs": 4, "set": 2.0, "actual": 2.1,
+                 "supply": 0.5, "ret": 3.0, "hum": 90.0,
+                 "pwr": "on", "defrost": False},
+                {"hrs": 1, "set": 2.0, "actual": 2.0,
+                 "supply": 0.4, "ret": 2.8, "hum": 91.0,
+                 "pwr": "on", "defrost": False},
+            ]),
+            # KKFU: juice at -5, brief defrost cycle
+            ("KKFU-6678901", [
+                {"hrs": 5, "set": -5.0, "actual": -4.8,
+                 "supply": -7.0, "ret": -4.0, "hum": 80.0,
+                 "pwr": "on", "defrost": False},
+                {"hrs": 2, "set": -5.0, "actual": -2.0,
+                 "supply": -3.0, "ret": -1.5, "hum": 78.0,
+                 "pwr": "on", "defrost": True},
+                {"hrs": 0, "set": -5.0, "actual": -4.9,
+                 "supply": -6.8, "ret": -4.1, "hum": 80.0,
+                 "pwr": "on", "defrost": False},
+            ]),
+            # WHLU: dairy at +4, TEMP ALARM (actual=-12 vs set=-18)
+            ("WHLU-7789012", [
+                {"hrs": 8, "set": -18.0, "actual": -17.8,
+                 "supply": -20.0, "ret": -17.0, "hum": 82.0,
+                 "pwr": "on", "defrost": False},
+                {"hrs": 3, "set": -18.0, "actual": -14.0,
+                 "supply": -16.0, "ret": -13.0, "hum": 75.0,
+                 "pwr": "alarm", "defrost": False},
+                {"hrs": 0, "set": -18.0, "actual": -12.0,
+                 "supply": -14.0, "ret": -11.0, "hum": 70.0,
+                 "pwr": "alarm", "defrost": False},
+            ]),
+        ]
+        for code, readings in reefer_readings_data:
+            c = cmap[code]
+            for r in readings:
+                rr = ReeferReading(
+                    tenant_id=tenant.id,
+                    container_id=c.id,
+                    set_temp_celsius=r["set"],
+                    actual_temp_celsius=r["actual"],
+                    supply_temp=r["supply"],
+                    return_temp=r["ret"],
+                    humidity_percent=r["hum"],
+                    power_status=r["pwr"],
+                    defrost_active=r["defrost"],
+                    recorded_at=now - timedelta(hours=r["hrs"]),
+                )
+                db.add(rr)
+            await db.flush()
+            alarm = " ALARM" if any(
+                x["pwr"] == "alarm" for x in readings
+            ) else ""
+            print(
+                f"  ReeferReadings: {code} "
+                f"({len(readings)} readings){alarm}"
+            )
+
+        # === Gate Events ===
+        gate_events_data = [
+            ("MSCU-4471220", 5, "ABC-1234", "Carlos Silva",
+             "123.456.789-00", "SL4471220"),
+            ("HLXU-2033891", 8, "DEF-5678", "Roberto Santos",
+             "987.654.321-00", "SL2033891"),
+            ("OOLU-3345127", 8, "GHI-9012", "Pedro Oliveira",
+             "456.789.123-00", "SL3345127"),
+            ("YMLU-4456789", 8, "JKL-3456", "André Costa",
+             "321.654.987-00", "SL4456789"),
+            ("SEGU-1123456", 8, "MNO-7890", "Marcos Pereira",
+             "654.321.987-00", "SL1123456"),
+            ("MSKU-1058823", 2, "PQR-2345", "Luiz Ferreira",
+             "789.123.456-00", "SL1058823"),
+        ]
+        for (code, days, plate,
+             driver, doc, seal) in gate_events_data:
+            c = cmap[code]
+            ge = GateEvent(
+                tenant_id=tenant.id,
+                yard_id=yard.id,
+                container_id=c.id,
+                event_type="gate_in",
+                truck_plate=plate,
+                driver_name=driver,
+                driver_doc=doc,
+                seal_number=seal,
+                seal_status="ok",
+                vgm_kg=c.weight_kg,
+                temperature_celsius=(
+                    c.reefer_temp_celsius
+                    if c.is_reefer else None
+                ),
+                notes=None,
+                recorded_by=admin.id,
+                recorded_at=now - timedelta(days=days),
+            )
+            db.add(ge)
+        await db.flush()
+        print(
+            f"  GateEvents: {len(gate_events_data)} "
+            f"gate_in records"
+        )
 
         # === Forklifts ===
         forklifts = []
