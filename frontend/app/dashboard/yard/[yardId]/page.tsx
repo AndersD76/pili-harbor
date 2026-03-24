@@ -33,6 +33,11 @@ interface YardStateResponse {
     block_label: string | null
     row: number | null
     col: number | null
+    cargo_type: string
+    is_reefer: boolean
+    imo_class: string | null
+    customs_status: string
+    cargo_description: string | null
   }>
   forklifts: Array<{
     id: string
@@ -92,6 +97,11 @@ export default function ControlCenter() {
             block_label: c.block_label ?? null,
             row: c.row ?? null,
             col: c.col ?? null,
+            cargo_type: c.cargo_type ?? 'general',
+            is_reefer: c.is_reefer ?? false,
+            imo_class: c.imo_class ?? null,
+            customs_status: c.customs_status ?? 'none',
+            cargo_description: c.cargo_description ?? null,
           }))
         )
         setForklifts(

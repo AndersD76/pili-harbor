@@ -12,6 +12,11 @@ export interface ContainerState {
   block_label: string | null
   row: number | null
   col: number | null
+  cargo_type: string
+  is_reefer: boolean
+  imo_class: string | null
+  customs_status: string
+  cargo_description: string | null
 }
 
 export interface ForkliftState {
