@@ -120,7 +120,7 @@ export default function YardCanvas() {
     }
 
     // Draw block zones
-    for (const [label, b] of blockBounds) {
+    Array.from(blockBounds.entries()).forEach(([label, b]) => {
       const pad = 8
       const bx = (b.minX - pad) * scale
       const by = (b.minY - pad) * scale
@@ -141,7 +141,7 @@ export default function YardCanvas() {
       ctx.fillText(`${label}`, bx + 6, by + 16)
       ctx.font = '9px sans-serif'
       ctx.fillText(`${b.count} ct`, bx + 6, by + 28)
-    }
+    })
 
     // Draw containers
     for (const c of containersArray) {
