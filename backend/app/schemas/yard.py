@@ -12,6 +12,8 @@ class YardCreate(BaseModel):
     height_meters: float
     grid_config: dict[str, Any] | None = None
     timezone: str = "America/Sao_Paulo"
+    origin_lat: float | None = None
+    origin_lng: float | None = None
 
 
 class YardUpdate(BaseModel):
@@ -21,6 +23,8 @@ class YardUpdate(BaseModel):
     height_meters: float | None = None
     grid_config: dict[str, Any] | None = None
     timezone: str | None = None
+    origin_lat: float | None = None
+    origin_lng: float | None = None
     active: bool | None = None
 
 
@@ -33,6 +37,8 @@ class YardResponse(BaseModel):
     height_meters: float
     grid_config: dict[str, Any] | None
     timezone: str
+    origin_lat: float | None
+    origin_lng: float | None
     active: bool
     created_at: datetime
     updated_at: datetime

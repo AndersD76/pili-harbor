@@ -259,20 +259,23 @@ async def seed():  # noqa: C901
         print(f"Tenant: {tenant.name} ({tenant.id})")
         print(f"Admin: {admin.full_name} ({admin.id})")
 
-        # Skip if already seeded
+        # Skip if already seeded (unless --force)
+        import sys
+        force = "--force" in sys.argv
+
         chk = await db.execute(
             select(Manifest).where(
                 Manifest.tenant_id == tenant.id
             )
         )
-        if chk.scalars().first():
-            print("Already seeded, skipping")
+        if chk.scalars().first() and not force:
+            print("Already seeded, use --force to re-seed")
             return
 
-        # Clean partial data
+        # Clean ALL existing data for this tenant
         for model in (
             Task, GateEvent, ReeferReading,
-            Forklift, Container, Yard,
+            Manifest, Forklift, Container, Yard,
         ):
             await db.execute(
                 delete(model).where(
@@ -286,7 +289,7 @@ async def seed():  # noqa: C901
             )
         )
         await db.flush()
-        print("Cleared partial data")
+        print("Cleared all demo data")
 
         # === Yard ===
         yard = Yard(
@@ -299,6 +302,8 @@ async def seed():  # noqa: C901
             width_meters=200,
             height_meters=150,
             timezone="America/Sao_Paulo",
+            origin_lat=-23.9536,
+            origin_lng=-46.3323,
             active=True,
         )
         db.add(yard)
